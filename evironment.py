@@ -7,6 +7,7 @@ from pennylane import numpy as np
 class CircuitDesigner(gym.Env):
     """Quantum Circuit Environment. Description will follow..."""
 
+    # TODO: change this ...
     metadata = {"render_modes": ["human"], "render_fps": 30}
 
     def __init__(self, max_qubits, max_depth):
@@ -76,6 +77,7 @@ class CircuitDesigner(gym.Env):
         if not terminated:
             reward = 0 # or -1 to punish step count?
         else:
+            # TODO: figure out how to include reward function into this class
 
         return observation, reward, terminated, truncated, info
 

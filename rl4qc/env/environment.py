@@ -19,7 +19,7 @@ class CircuitDesigner(gym.Env):
         # initialize quantum device to use
         self.device = qml.device('default.qubit', wires=max_qubits)
         # define action space
-        self.action_space = Tuple((Discrete(5),Discrete(max_qubits), Box(low=0,high=2*np.pi,shape=(2,))), seed=100)
+        self.action_space = Tuple((Discrete(5),Discrete(max_qubits), Box(low=0,high=2*np.pi,shape=(2,))))
         # define observation space
         self.observation_space = Dict(
             {'real': Box(low=np.NINF, high=np.inf, shape=(2**max_qubits)),

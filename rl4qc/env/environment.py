@@ -2,7 +2,7 @@ import gymnasium as gym
 from gymnasium.spaces import Tuple, Box, Discrete, Dict
 
 import pennylane as qml
-#from pennylane import numpy as np
+# from pennylane import numpy as np
 import numpy as np
 
 class CircuitDesigner(gym.Env):
@@ -22,8 +22,8 @@ class CircuitDesigner(gym.Env):
         self.action_space = Tuple((Discrete(5),Discrete(max_qubits), Box(low=0,high=2*np.pi,shape=(2,))))
         # define observation space
         self.observation_space = Dict(
-            {'real': Box(low=np.NINF, high=np.inf, shape=(2**max_qubits)),
-            'imag': Box(low=np.NINF, high=np.inf, shape=(2**max_qubits))} )
+            {'real': Box(low=np.NINF, high=np.inf, shape=(2**max_qubits,)),
+            'imag': Box(low=np.NINF, high=np.inf, shape=(2**max_qubits,))} )
 
     def _action_to_operation(self, action):
         """ Converter translating actions from action_space into quantum operations """

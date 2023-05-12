@@ -16,7 +16,7 @@ class CircuitDesigner(gym.Env):
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
         self.depth = max_depth
-        # initialize quantum device to use
+        # initialize quantum device to use for QNode
         self.device = qml.device('default.qubit', wires=max_qubits)
         # define action space
         self.action_space = Tuple((Discrete(5),Discrete(max_qubits), Box(low=0,high=2*np.pi,shape=(2,))))
@@ -44,7 +44,6 @@ class CircuitDesigner(gym.Env):
         elif action[0] == 3: # mid-circuit measurement
             return qml.measure(wire)
 
-    #@qml.qnode(self.device)
     def _build_circuit(self):
         """ Quantum Circuit Function taking a list of quantum operations and returning state information """
         for op in self._operations:
@@ -52,20 +51,22 @@ class CircuitDesigner(gym.Env):
         return qml.state()
 
     def _get_info(self):
-        return qml.specs(self._build_circuit)()
+        circuit = qml.QNode(self._build_circuit, self.device)
+        return qml.specs(circuit)()
 
     def _draw_circiut(self):
-        fig, ax = qml.draw_mpl(self._build_circuit())
-        fig.show()
+        circuit = qml.QNode(self._build_circuit(),self.device)
+        print(qml.draw(circuit)())
+        # TODO: fix qml.draw_mpl(self._build_circuit())
 
     def reset(self, seed=None, options=None):
 
         # start with an empty trajectory of operations
         self._operations = []
         # calculate zero-state information
-        obs = np.array(self._build_circuit())
-        self._observation = Dict({'real': np.real(obs),
-                                  'imag': np.imag(obs)})
+        circuit = qml.QNode(self._build_circuit, self.device)
+        self._observation = Dict({'real': np.real(np.array(circuit())),
+                                  'imag': np.imag(np.array(circuit()))})
         observation = self._observation
 
         # evaluate additional information
@@ -92,12 +93,11 @@ class CircuitDesigner(gym.Env):
             # update action trajectory
             self._operations.append(operation)
             # compute state observation
-            obs = np.array(self._build_circuit())
-            self._observation = Dict({'real': np.real(obs),
-                                      'imag': np.imag(obs)})
+            circuit = qml.QNode(self._build_circuit, self.device)
+            self._observation = Dict({'real': np.real(np.array(circuit())),
+                                      'imag': np.imag(np.array(circuit()))})
 
         observation = self._observation
-
 
         # sparse reward of action
         if not terminated:

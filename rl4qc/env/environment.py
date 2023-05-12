@@ -65,8 +65,8 @@ class CircuitDesigner(gym.Env):
         self._operations = []
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
-        self._observation = Dict({'real': np.real(np.array(circuit())),
-                                  'imag': np.imag(np.array(circuit()))})
+        self._observation = Dict({'real': np.real(np.array(circuit(), np.float32)),
+                                  'imag': np.imag(np.array(circuit(), np.float32))})
         observation = self._observation
 
         # evaluate additional information
@@ -94,8 +94,8 @@ class CircuitDesigner(gym.Env):
             self._operations.append(operation)
             # compute state observation
             circuit = qml.QNode(self._build_circuit, self.device)
-            self._observation = Dict({'real': np.real(np.array(circuit())),
-                                      'imag': np.imag(np.array(circuit()))})
+            self._observation = Dict({'real': np.real(np.array(circuit(), np.float32)),
+                                      'imag': np.imag(np.array(circuit(), np.float32))})
 
         observation = self._observation
 

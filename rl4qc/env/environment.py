@@ -77,7 +77,7 @@ class CircuitDesigner(gym.Env):
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
         self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                      np.imag(np.array(circuit(), np.float32))))
+                                       np.imag(np.array(circuit(), np.float32))))
         observation = self._observation
 
         # evaluate additional (circuit) information
@@ -95,7 +95,7 @@ class CircuitDesigner(gym.Env):
         else:
             truncated = False
             # determining what action to take
-            if action[0] == 4:
+            if action[0] == 4 or len(self._disabled) == self.qubits:
                 terminated = True
             else:
                 terminated = False
@@ -107,7 +107,7 @@ class CircuitDesigner(gym.Env):
                 # compute state observation
                 circuit = qml.QNode(self._build_circuit, self.device)
                 self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                              np.imag(np.array(circuit(), np.float32))))
+                                               np.imag(np.array(circuit(), np.float32))))
 
         observation = self._observation
 

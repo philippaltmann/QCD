@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gymnasium.spaces import Tuple, Box, Discrete, Dict
+from gymnasium.spaces import Tuple, Box, Discrete
 
 import pennylane as qml
 # from pennylane import numpy as np
@@ -16,15 +16,13 @@ class CircuitDesigner(gym.Env):
 
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
-        self.depth = max_depth
+        self.depth = max_depth  # the (maximal) available circuit depth
         # initialize quantum device to use for QNode
         self.device = qml.device('default.qubit', wires=max_qubits)
         # define action space
         self.action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
         # define observation space
-        self.observation_space = Dict(
-            {'real': Box(low=-1, high=+1, shape=(2**max_qubits,)),
-             'imag': Box(low=-1, high=+1, shape=(2**max_qubits,))})
+        self.observation_space = Box(low=-1, high=+1, shape=(2**max_qubits, 2))
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
@@ -37,7 +35,7 @@ class CircuitDesigner(gym.Env):
             op_z_m = qml.exp(qml.PauliZ(wire), -1j*action[2][1])
             return qml.prod(op_z_p, op_x, op_z_m)
         elif action[0] == 2:  # CNOT (only neighbouring qubits)
-            # decide control qubit based on action parameters
+            # decide control qubit based on parameters
             if action[2][0] <= action[2][1]:
                 return qml.CNOT(wires=[(wire-1) % (self.qubits-1)+1, wire])
             else:
@@ -71,8 +69,8 @@ class CircuitDesigner(gym.Env):
         self._operations = []
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
-        self._observation = {'real': np.real(np.array(circuit(), np.float32)),
-                             'imag': np.imag(np.array(circuit(), np.float32))}
+        self._observation = np.array([np.real(np.array(circuit(), np.float32)),
+                                      np.imag(np.array(circuit(), np.float32))])
         observation = self._observation
 
         # evaluate additional information
@@ -100,8 +98,8 @@ class CircuitDesigner(gym.Env):
             self._operations.append(operation)
             # compute state observation
             circuit = qml.QNode(self._build_circuit, self.device)
-            self._observation = {'real': np.real(np.array(circuit(), np.float32)),
-                                 'imag': np.imag(np.array(circuit(), np.float32))}
+            self._observation = np.array([np.real(np.array(circuit(), np.float32)),
+                                          np.imag(np.array(circuit(), np.float32))])
 
         observation = self._observation
 

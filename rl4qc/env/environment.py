@@ -5,6 +5,9 @@ import pennylane as qml
 # from pennylane import numpy as np
 import numpy as np
 
+# disable warnings
+import logging
+gym.logger.setLevel(logging.WARNING)
 
 class CircuitDesigner(gym.Env):
     """Quantum Circuit Environment. Description will follow..."""
@@ -16,6 +19,8 @@ class CircuitDesigner(gym.Env):
 
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
+        if max_qubits < 2:  # check qubit parameter
+            raise ValueError('number of available qubits must be at least 2')
         self.depth = max_depth  # the (maximal) available circuit depth
         # initialize quantum device to use for QNode
         self.device = qml.device('default.qubit', wires=max_qubits)
@@ -40,9 +45,15 @@ class CircuitDesigner(gym.Env):
                 return qml.prod(op_z_p, op_x, op_z_m)
             elif action[0] == 2:  # CNOT (only neighbouring qubits)
                 if action[2][0] <= action[2][1]:  # decide control qubit based on parameters
-                    return qml.CNOT(wires=[(wire-1) % (self.qubits-1)+1, wire])
+                    if wire == 0:
+                        return qml.CNOT(wires=[self.qubits-1, wire])
+                    else:
+                        return qml.CNOT(wires=[wire-1, wire])
                 else:
-                    return qml.CNOT(wires=[(wire+1) % (self.qubits-1)-1, wire])
+                    if wire == self.qubits-1:
+                        return qml.CNOT(wires=[0, wire])
+                    else:
+                        return qml.CNOT(wires=[wire+1, wire])
             elif action[0] == 3:  # mid-circuit measurement
                 self._disabled.append(wire)
                 return int(wire)
@@ -61,9 +72,9 @@ class CircuitDesigner(gym.Env):
         return qml.specs(circuit)()
 
     def _draw_circiut(self):
-        circuit = qml.QNode(self._build_circuit(), self.device)
+        circuit = qml.QNode(self._build_circuit, self.device)
         print(qml.draw(circuit)())
-        # TODO: fix qml.draw_mpl(self._build_circuit())
+        # TODO: use instead qml.draw_mpl()...
 
     def reset(self, seed=None, options=None):
         # set seed for random number generator

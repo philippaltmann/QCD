@@ -22,7 +22,7 @@ class CircuitDesigner(gym.Env):
         # define action space
         self.action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
         # define observation space
-        self.observation_space = Box(low=-1, high=+1, shape=(2**max_qubits, 2))
+        self.observation_space = Box(low=-1.0, high=+1.0, shape=(2, 2**max_qubits))
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
@@ -69,8 +69,8 @@ class CircuitDesigner(gym.Env):
         self._operations = []
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
-        self._observation = np.array([np.real(np.array(circuit(), np.float32)),
-                                      np.imag(np.array(circuit(), np.float32))])
+        self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
+                                      np.imag(np.array(circuit(), np.float32))))
         observation = self._observation
 
         # evaluate additional information
@@ -98,8 +98,8 @@ class CircuitDesigner(gym.Env):
             self._operations.append(operation)
             # compute state observation
             circuit = qml.QNode(self._build_circuit, self.device)
-            self._observation = np.array([np.real(np.array(circuit(), np.float32)),
-                                          np.imag(np.array(circuit(), np.float32))])
+            self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
+                                          np.imag(np.array(circuit(), np.float32))))
 
         observation = self._observation
 

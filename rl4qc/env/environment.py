@@ -27,21 +27,25 @@ class CircuitDesigner(gym.Env):
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
         wire = action[1]
-        if action[0] == 0:  # Z-Rotation
-            return qml.RZ(phi=action[2][0], wires=wire)
-        elif action[0] == 1:  # Phased-X
-            op_z_p = qml.exp(qml.PauliZ(wire), 1j*action[2][1])
-            op_x = qml.exp(qml.PauliX(wire), 1j*action[2][0])
-            op_z_m = qml.exp(qml.PauliZ(wire), -1j*action[2][1])
-            return qml.prod(op_z_p, op_x, op_z_m)
-        elif action[0] == 2:  # CNOT (only neighbouring qubits)
-            # decide control qubit based on parameters
-            if action[2][0] <= action[2][1]:
-                return qml.CNOT(wires=[(wire-1) % (self.qubits-1)+1, wire])
-            else:
-                return qml.CNOT(wires=[(wire+1) % (self.qubits-1)-1, wire])
-        elif action[0] == 3:  # mid-circuit measurement
-            return int(wire)
+        # check if wire is already disabled (due to prior measurement)
+        if wire in self._disabled:
+            return "disabled"
+        else:
+            if action[0] == 0:  # Z-Rotation
+                return qml.RZ(phi=action[2][0], wires=wire)
+            elif action[0] == 1:  # Phased-X
+                op_z_p = qml.exp(qml.PauliZ(wire), 1j*action[2][1])
+                op_x = qml.exp(qml.PauliX(wire), 1j*action[2][0])
+                op_z_m = qml.exp(qml.PauliZ(wire), -1j*action[2][1])
+                return qml.prod(op_z_p, op_x, op_z_m)
+            elif action[0] == 2:  # CNOT (only neighbouring qubits)
+                if action[2][0] <= action[2][1]:  # decide control qubit based on parameters
+                    return qml.CNOT(wires=[(wire-1) % (self.qubits-1)+1, wire])
+                else:
+                    return qml.CNOT(wires=[(wire+1) % (self.qubits-1)-1, wire])
+            elif action[0] == 3:  # mid-circuit measurement
+                self._disabled.append(wire)
+                return int(wire)
 
     def _build_circuit(self):
         """ Quantum Circuit Function taking a list of quantum operations and returning state information """
@@ -67,49 +71,56 @@ class CircuitDesigner(gym.Env):
 
         # start with an empty trajectory of operations
         self._operations = []
+        # start with an empty list of disables qubits (due to measurement)
+        self._disabled = []
+
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
         self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
                                       np.imag(np.array(circuit(), np.float32))))
         observation = self._observation
 
-        # evaluate additional information
+        # evaluate additional (circuit) information
         info = self._get_info()
 
         return observation, info
 
     def step(self, action):
 
-        # check truncation criterion:
+        # check truncation criterion
         specs = self._get_info()
         if specs['depth'] >= self.depth:
             truncated = True
+            terminated = False
         else:
             truncated = False
-
-        # determining what action to take
-        if action[0] == 4:
-            terminated = True
-        else:
-            terminated = False
-            # conduct action
-            operation = self._action_to_operation(action)
-            # update action trajectory
-            self._operations.append(operation)
-            # compute state observation
-            circuit = qml.QNode(self._build_circuit, self.device)
-            self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                          np.imag(np.array(circuit(), np.float32))))
+            # determining what action to take
+            if action[0] == 4:
+                terminated = True
+            else:
+                terminated = False
+                # conduct action
+                operation = self._action_to_operation(action)
+                if operation != "disabled":
+                    # update action trajectory
+                    self._operations.append(operation)
+                # compute state observation
+                circuit = qml.QNode(self._build_circuit, self.device)
+                self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
+                                              np.imag(np.array(circuit(), np.float32))))
 
         observation = self._observation
 
-        # sparse reward of action
-        if not terminated:
+        # sparse reward computation
+        if not terminated and not truncated:
             reward = 0  # or -1 to punish step count?
-        else:
+        elif terminated:
             self._draw_circiut()  # render circuit only after each episode
             # TODO: figure out how to include reward function into this class
-            reward = None
+            reward = 0
+        else:  # truncated!
+            # TODO: figure out reward for truncated case
+            reward = 0
 
         # evaluate additional information
         info = self._get_info()

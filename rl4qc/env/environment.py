@@ -5,7 +5,7 @@ import pennylane as qml
 # from pennylane import numpy as np
 import numpy as np
 
-from rewards import compute_reward
+from rewards import Reward
 
 # disable warnings
 import logging
@@ -128,11 +128,9 @@ class CircuitDesigner(gym.Env):
         # sparse reward computation
         if not terminated and not truncated:
             reward = 0
-        elif terminated:
+        else:
             self._draw_circuit()  # render circuit only after each episode
-            reward = compute_reward(circuit, self.challenge, self.depth)
-        else:  # truncated:
-            reward = compute_reward(circuit, self.challenge, self.depth) - 0.1
+            reward = Reward(circuit, self.depth).compute_reward(self.challenge)
 
         # evaluate additional information
         info = self._get_info()

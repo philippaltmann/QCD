@@ -5,23 +5,26 @@ import pennylane as qml
 # from pennylane import numpy as np
 import numpy as np
 
+from rewards import compute_reward
+
 # disable warnings
 import logging
 gym.logger.setLevel(logging.WARNING)
+
 
 class CircuitDesigner(gym.Env):
     """Quantum Circuit Environment. Description will follow..."""
 
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, max_qubits, max_depth):
+    def __init__(self, max_qubits: int, max_depth: int, challenge: str):
         super().__init__()
 
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
-        if max_qubits < 2:  # check qubit parameter
-            raise ValueError('number of available qubits must be at least 2')
+        assert max_qubits >= 2, "number of available qubits must be at least 2."
         self.depth = max_depth  # the (maximal) available circuit depth
+        self.challenge = challenge  # challenge for reward computation
         # initialize quantum device to use for QNode
         self.device = qml.device('default.qubit', wires=max_qubits)
         # define action space
@@ -71,7 +74,7 @@ class CircuitDesigner(gym.Env):
         circuit = qml.QNode(self._build_circuit, self.device)
         return qml.specs(circuit)()
 
-    def _draw_circiut(self):
+    def _draw_circuit(self):
         circuit = qml.QNode(self._build_circuit, self.device)
         print(qml.draw(circuit)())
         # TODO: use instead qml.draw_mpl()...
@@ -124,14 +127,12 @@ class CircuitDesigner(gym.Env):
 
         # sparse reward computation
         if not terminated and not truncated:
-            reward = 0  # or -1 to punish step count?
+            reward = 0
         elif terminated:
-            self._draw_circiut()  # render circuit only after each episode
-            # TODO: figure out how to include reward function into this class
-            reward = 0
-        else:  # truncated!
-            # TODO: figure out reward for truncated case
-            reward = 0
+            self._draw_circuit()  # render circuit only after each episode
+            reward = compute_reward(circuit, self.challenge, self.depth)
+        else:  # truncated:
+            reward = compute_reward(circuit, self.challenge, self.depth) - 0.1
 
         # evaluate additional information
         info = self._get_info()

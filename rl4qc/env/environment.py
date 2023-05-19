@@ -5,11 +5,11 @@ import pennylane as qml
 # from pennylane import numpy as np
 import numpy as np
 
-from rewards import Reward
+from .rewards import Reward
 
 # disable warnings
 import logging
-gym.logger.setLevel(logging.WARNING)
+gym.logger.setLevel(logging.ERROR)
 
 
 class CircuitDesigner(gym.Env):
@@ -118,11 +118,11 @@ class CircuitDesigner(gym.Env):
                 if operation != "disabled":
                     # update action trajectory
                     self._operations.append(operation)
-                # compute state observation
-                circuit = qml.QNode(self._build_circuit, self.device)
-                self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                               np.imag(np.array(circuit(), np.float32))))
 
+        # compute state observation
+        circuit = qml.QNode(self._build_circuit, self.device)
+        self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
+                                       np.imag(np.array(circuit(), np.float32))))
         observation = self._observation
 
         # sparse reward computation

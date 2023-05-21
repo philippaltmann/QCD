@@ -76,8 +76,8 @@ class CircuitDesigner(gym.Env):
 
     def _draw_circuit(self):
         circuit = qml.QNode(self._build_circuit, self.device)
-        print(qml.draw(circuit)())
-        # TODO: use instead qml.draw_mpl()...
+        fig, ax = qml.draw_mpl(circuit)()
+        fig.show()
 
     def reset(self, seed=None, options=None):
         # set seed for random number generator

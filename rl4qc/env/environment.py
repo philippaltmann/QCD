@@ -14,6 +14,7 @@ gym.logger.setLevel(logging.ERROR)
 
 class CircuitDesigner(gym.Env):
     """Quantum Circuit Environment. Description will follow..."""
+    # TODO: description...
 
     metadata = {"render_modes": ["human"]}
 
@@ -42,10 +43,7 @@ class CircuitDesigner(gym.Env):
             if action[0] == 0:  # Z-Rotation
                 return qml.RZ(phi=action[2][0], wires=wire)
             elif action[0] == 1:  # Phased-X
-                op_z_p = qml.exp(qml.PauliZ(wire), 1j*action[2][1])
-                op_x = qml.exp(qml.PauliX(wire), 1j*action[2][0])
-                op_z_m = qml.exp(qml.PauliZ(wire), -1j*action[2][1])
-                return qml.prod(op_z_p, op_x, op_z_m)
+                return self._PX(action[2][0], action[2][1], wire)
             elif action[0] == 2:  # CNOT (only neighbouring qubits)
                 if action[2][0] <= action[2][1]:  # decide control qubit based on parameters
                     if wire == 0:
@@ -142,3 +140,11 @@ class CircuitDesigner(gym.Env):
 
     # def close(self):
     # currently there is no need for a close method
+
+    # PHASED-X Operator:
+    @staticmethod
+    def _PX(phi1, phi2, wire):
+        op_z_p = qml.exp(qml.PauliZ(wire), 1j * phi2)
+        op_x = qml.exp(qml.PauliX(wire), 1j * phi1)
+        op_z_m = qml.exp(qml.PauliZ(wire), -1j * phi2)
+        qml.prod(op_z_p, op_x, op_z_m)

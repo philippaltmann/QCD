@@ -6,7 +6,7 @@ class PX(qml.operation.Operation):
     https://github.com/google-research/google-research/tree/master/rl4circopt """
 
     # Define how many wires the operator acts on in total.
-    num_wires = 0
+    num_wires = 1
 
     # Define what differentiation method to use (here: parameter-shift)
     grad_method = "A"

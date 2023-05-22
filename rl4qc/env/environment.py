@@ -163,7 +163,7 @@ class CircuitDesigner(gym.Env):
             reward = 0
         else:
             self._draw_circuit()  # render circuit only after each episode
-            reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge)
+            reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge, punish=True)
 
         # evaluate additional information
         info = self._get_info()

@@ -14,11 +14,14 @@ class Reward:
         self.depth = max_depth
         self.qubits = max_qubit
 
-    def compute_reward(self, challenge):
+    def compute_reward(self, challenge, punish):
         task, param = re.split("-", challenge)
         if task == 'SP':  # StatePreparation
-            return self._state_preparation(param)
+            reward = self._state_preparation(param)
         # and more to come...
+        if punish:
+            reward -= 0.1 * qml.specs(self.circuit)()['depth']/self.depth
+        return reward
 
     # REWARD FUNCTIONS:
     def _state_preparation(self, param):
@@ -47,9 +50,7 @@ class Reward:
         target = np.array(qml.QNode(self._state_transform, self.circuit.device)(target))
         # compute fidelity between target and output state within [0,1]
         fidelity = abs(np.vdot(state, target))**2
-        # compute punishment due to circuit depth (should be < 0.1)
-        punish = qml.specs(self.circuit)()['depth'] * 0.1/self.depth
-        return fidelity - punish
+        return fidelity
 
     # UTILITY FUNCTIONS:
     @staticmethod

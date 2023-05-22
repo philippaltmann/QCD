@@ -7,7 +7,7 @@ class Reward:
 
     # list of available challenges:
     challenges = ['SP']
-    states = ['bell', 'ghzN']
+    states = ['bell', 'ghzN #N:number of qubits']
 
     def __init__(self, circuit, max_qubit, max_depth):
         self.circuit = circuit
@@ -22,6 +22,10 @@ class Reward:
 
     # REWARD FUNCTIONS:
     def _state_preparation(self, param):
+        """ Compute Reward for State Preparation (SP) task.
+            - PLUS fidelity of the state produced by circuit compared to a given target state defined by param
+            - MINUS punishment corresponding to circuit depth."""
+
         # compute output state of designed circuit
         state = np.array(self.circuit())
         # define target state based on param-string
@@ -31,6 +35,8 @@ class Reward:
             n = int(param[3:])
             assert n >= 2, "GHZ entangled state must have at least 2 qubits. " \
                            "\n For N=2: GHZ state is equal to Bell state."
+            assert n <= self.qubits, "Target GHZ state cannot consist of more qubits " \
+                                     "than are available within the circuit environment."
             target = np.zeros(shape=(2**n,), dtype=np.complex128)
             target[0] = target[-1] = 1/np.sqrt(2)
         else:

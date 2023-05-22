@@ -2,8 +2,8 @@ import gymnasium as gym
 from gymnasium.spaces import Tuple, Box, Discrete
 
 import pennylane as qml
-# from pennylane import numpy as np
 import numpy as np
+import re
 
 from .rewards import Reward
 
@@ -13,8 +13,34 @@ gym.logger.setLevel(logging.ERROR)
 
 
 class CircuitDesigner(gym.Env):
-    """Quantum Circuit Environment. Description will follow..."""
-    # TODO: description...
+    """ Quantum Circuit Environment:
+    build a quantum circuit gate-by-gate for a desired challenge.
+    ...
+
+    Attributes
+    ----------
+    qubits : int
+        number of available qubits for quantum circuit
+    depth : int
+        maximum depth desired for quantum circuit
+    challenge : str
+        RL challenge for which the circuit is to be built (see Reward class)
+    device : qml.device
+        quantum device to use (see PennyLane)
+
+    action_space : gymnasium.spaces
+        action space consisting of (gate: Discrete, target qubit: Discrete, params: Box)
+    observation_space : gymnasium.spaces
+        complex observation of state in the computational basis as a Box with [real, imag]
+
+    Methods
+    -------
+    reset():
+        resets the circuit to initial state of |0>^n with empty list of operations
+    step(action):
+        updates environment for given action, returning observation and reward after that action
+
+    """
 
     metadata = {"render_modes": ["human"]}
 
@@ -23,11 +49,18 @@ class CircuitDesigner(gym.Env):
 
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
-        assert max_qubits >= 2, "number of available qubits must be at least 2."
+        if max_qubits < 2:
+            raise ValueError('number of available qubits must be at least 2.')
         self.depth = max_depth  # the (maximal) available circuit depth
         self.challenge = challenge  # challenge for reward computation
+        task = re.split("-", self.challenge)[0]
+        if task not in Reward.challenges:
+            raise ValueError(f'desired challenge {task} is not defined in this class.'
+                             f'See attribute "challenges" for a list of available challenges')
+
         # initialize quantum device to use for QNode
         self.device = qml.device('default.qubit', wires=max_qubits)
+
         # define action space
         self.action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
         # define observation space
@@ -69,10 +102,12 @@ class CircuitDesigner(gym.Env):
         return qml.state()
 
     def _get_info(self):
+        """ Dictionary of most important circuit properties."""
         circuit = qml.QNode(self._build_circuit, self.device)
         return qml.specs(circuit)()
 
     def _draw_circuit(self):
+        """ Drawing given circuit using matplotlib."""
         circuit = qml.QNode(self._build_circuit, self.device)
         fig, ax = qml.draw_mpl(circuit)()
         fig.show()
@@ -128,7 +163,7 @@ class CircuitDesigner(gym.Env):
             reward = 0
         else:
             self._draw_circuit()  # render circuit only after each episode
-            reward = Reward(circuit, self.depth).compute_reward(self.challenge)
+            reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge)
 
         # evaluate additional information
         info = self._get_info()
@@ -138,12 +173,10 @@ class CircuitDesigner(gym.Env):
     def render(self):
         return None
 
-    # def close(self):
-    # currently there is no need for a close method
-
     # PHASED-X Operator:
     @staticmethod
     def _PX(phi1, phi2, wire):
+        """Wrapper function for the Phased-X operator."""
         op_z_p = qml.exp(qml.PauliZ(wire), 1j * phi2)
         op_x = qml.exp(qml.PauliX(wire), 1j * phi1)
         op_z_m = qml.exp(qml.PauliZ(wire), -1j * phi2)

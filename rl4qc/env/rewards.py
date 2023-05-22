@@ -4,20 +4,21 @@ import pennylane as qml
 
 
 class Reward:
-    def __init__(self, circuit, max_depth):
+
+    # list of available challenges:
+    challenges = ['SP']
+    states = ['bell', 'ghzN']
+
+    def __init__(self, circuit, max_qubit, max_depth):
         self.circuit = circuit
         self.depth = max_depth
-        # list available challenges:
-        self.challenges = ['SP']
-        self.states = ['bell', 'ghzN']
+        self.qubits = max_qubit
 
     def compute_reward(self, challenge):
         task, param = re.split("-", challenge)
         if task == 'SP':  # StatePreparation
             return self._state_preparation(param)
-        else:
-            raise ValueError(f'desired challenge {task} is not defined in this class.'
-                             f'See attribute "challenges" for a list of available challenges')
+        # and more to come...
 
     # REWARD FUNCTIONS:
     def _state_preparation(self, param):
@@ -35,6 +36,7 @@ class Reward:
         else:
             raise ValueError(f'desired target state {param} is not defined in this reward function.'
                              f'See attribute "states" for a list of available states')
+
         # make up for possibly unused qubits (transform to basis of output state)
         target = np.array(qml.QNode(self._state_transform, self.circuit.device)(target))
         # compute fidelity between target and output state within [0,1]

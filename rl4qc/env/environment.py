@@ -10,6 +10,7 @@ from .rewards import Reward
 # disable warnings
 import logging
 gym.logger.setLevel(logging.ERROR)
+logging.getLogger().setLevel(logging.ERROR)
 
 
 class CircuitDesigner(gym.Env):

@@ -79,15 +79,13 @@ class CircuitDesigner(gym.Env):
                 return self._PX(action[2][0], action[2][1], wire)
             elif action[0] == 2:  # CNOT (only neighbouring qubits)
                 if action[2][0] <= action[2][1]:  # decide control qubit based on parameters
-                    if wire == 0:
-                        return qml.CNOT(wires=[self.qubits-1, wire])
-                    else:
-                        return qml.CNOT(wires=[wire-1, wire])
+                    control = (wire-1) % self.qubits
                 else:
-                    if wire == self.qubits-1:
-                        return qml.CNOT(wires=[0, wire])
-                    else:
-                        return qml.CNOT(wires=[wire+1, wire])
+                    control = (wire+1) % self.qubits
+                if control in self._disabled:  # check if control qubit already disabled
+                    return "disabled"
+                else:
+                    return qml.CNOT(wires=[control, wire])
             elif action[0] == 3:  # mid-circuit measurement
                 self._disabled.append(wire)
                 return int(wire)

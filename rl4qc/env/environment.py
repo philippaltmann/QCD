@@ -11,6 +11,7 @@ from .rewards import Reward
 import logging
 gym.logger.setLevel(logging.ERROR)
 logging.getLogger().setLevel(logging.ERROR)
+# TODO: this doesn't work yet, unfortunately --> figure out how to disable warnings!
 
 
 class CircuitDesigner(gym.Env):
@@ -179,4 +180,4 @@ class CircuitDesigner(gym.Env):
         op_z_p = qml.exp(qml.PauliZ(wire), 1j * phi2)
         op_x = qml.exp(qml.PauliX(wire), 1j * phi1)
         op_z_m = qml.exp(qml.PauliZ(wire), -1j * phi2)
-        qml.prod(op_z_p, op_x, op_z_m)
+        return qml.prod(op_z_p, op_x, op_z_m)

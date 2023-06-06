@@ -69,6 +69,7 @@ class CircuitDesigner(gym.Env):
         # define action space
         self._action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
         self.action_space = flatten_space(self._action_space) # flattened for training purposes
+        # TODO: this flattened space does not seem to produce the same possible actions...!
 
         # define observation space
         self.observation_space = Dict(

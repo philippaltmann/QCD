@@ -1,6 +1,9 @@
 import gymnasium as gym
 from gymnasium.spaces import Tuple, Box, Discrete, Dict
 
+from gymnasium.spaces.utils import flatten_space
+from gymnasium.spaces.utils import unflatten
+
 import pennylane as qml
 import numpy as np
 import re
@@ -64,7 +67,9 @@ class CircuitDesigner(gym.Env):
         self.device = qml.device('default.qubit', wires=max_qubits)
 
         # define action space
-        self.action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
+        self._action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
+        self.action_space = flatten_space(self._action_space) # flattened for training purposes
+
         # define observation space
         self.observation_space = Dict(
             {'real': Box(low=-1.0, high=+1.0, shape=(2**max_qubits, )),
@@ -134,6 +139,9 @@ class CircuitDesigner(gym.Env):
         return observation, info
 
     def step(self, action):
+
+        # unflatten action for interpretation
+        action = unflatten(self._action_space, action)
 
         # check truncation criterion
         specs = self._get_info()

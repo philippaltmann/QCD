@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gymnasium.spaces import Tuple, Box, Discrete
+from gymnasium.spaces import Tuple, Box, Discrete, Dict
 
 import pennylane as qml
 import numpy as np
@@ -66,7 +66,9 @@ class CircuitDesigner(gym.Env):
         # define action space
         self.action_space = Tuple((Discrete(5), Discrete(max_qubits), Box(low=0, high=2*np.pi, shape=(2,))))
         # define observation space
-        self.observation_space = Box(low=-1.0, high=+1.0, shape=(2, 2**max_qubits))
+        self.observation_space = Dict(
+            {'real': Box(low=-1.0, high=+1.0, shape=(2**max_qubits, )),
+             'imag': Box(low=-1.0, high=+1.0, shape=(2**max_qubits, ))})
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
@@ -123,9 +125,8 @@ class CircuitDesigner(gym.Env):
 
         # calculate zero-state information
         circuit = qml.QNode(self._build_circuit, self.device)
-        self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                       np.imag(np.array(circuit(), np.float32))))
-        observation = self._observation
+        observation = {'real': np.real(np.array(circuit(), np.float32)),
+                       'imag': np.imag(np.array(circuit(), np.float32))}
 
         # evaluate additional (circuit) information
         info = self._get_info()
@@ -154,9 +155,8 @@ class CircuitDesigner(gym.Env):
 
         # compute state observation
         circuit = qml.QNode(self._build_circuit, self.device)
-        self._observation = np.vstack((np.real(np.array(circuit(), np.float32)),
-                                       np.imag(np.array(circuit(), np.float32))))
-        observation = self._observation
+        observation = {'real': np.real(np.array(circuit(), np.float32)),
+                       'imag': np.imag(np.array(circuit(), np.float32))}
 
         # sparse reward computation
         if not terminated and not truncated:

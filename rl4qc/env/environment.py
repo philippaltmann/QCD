@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gymnasium.spaces import Tuple, Box, Discrete, Dict
+from gymnasium.spaces import Tuple, Box, Dict
 
 from gymnasium.spaces.utils import flatten_space
 from gymnasium.spaces.utils import unflatten
@@ -14,7 +14,7 @@ from .rewards import Reward
 import logging
 gym.logger.setLevel(logging.ERROR)
 logging.getLogger().setLevel(logging.ERROR)
-# TODO: this doesn't work yet, unfortunately --> figure out how to disable warnings!
+# TODO: this doesn't work, unfortunately --> figure out how to disable warnings!
 
 
 class CircuitDesigner(gym.Env):
@@ -67,9 +67,10 @@ class CircuitDesigner(gym.Env):
         self.device = qml.device('default.qubit', wires=max_qubits)
 
         # define action space
-        self._action_space = Tuple((Box(low=0, high=4, dtype=np.int_), Box(low=0, high=max_qubits-1, dtype=np.int_), Box(low=0, high=2*np.pi, shape=(2,))))
-        self.action_space = flatten_space(self._action_space) # flattened for training purposes
-        # TODO: this flattened space does not seem to produce the same possible actions...!
+        self._action_space = Tuple((Box(low=0, high=5, dtype=np.int_),  # operation type (gate, measurement, terminate)
+                                    Box(low=0, high=max_qubits, dtype=np.int_),  # qubit(s) for operation
+                                    Box(low=0, high=2*np.pi, shape=(2,))))  # additional continuous parameters
+        self.action_space = flatten_space(self._action_space)  # flatten for training purposes
 
         # define observation space
         self.observation_space = Dict(
@@ -78,7 +79,7 @@ class CircuitDesigner(gym.Env):
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
-        wire = action[1]
+        wire = action[1][0]
         # check if wire is already disabled (due to prior measurement)
         if wire in self._disabled:
             return "disabled"
@@ -151,7 +152,7 @@ class CircuitDesigner(gym.Env):
             terminated = False
         else:
             truncated = False
-            # determining what action to take
+            # determine what action to take
             if action[0] == 4 or len(self._disabled) == self.qubits:
                 terminated = True
             else:
@@ -173,6 +174,7 @@ class CircuitDesigner(gym.Env):
         else:
             self._draw_circuit()  # render circuit only after each episode
             reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge, punish=True)
+            print(f'reward = {reward}')
 
         # evaluate additional information
         info = self._get_info()

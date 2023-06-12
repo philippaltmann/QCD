@@ -83,6 +83,10 @@ class CircuitDesigner(gym.Env):
         # check if wire is already disabled (due to prior measurement)
         if wire in self._disabled:
             return "disabled"
+        # check if wire is actually available
+        elif wire not in range(self.qubits):
+            return "disabled"
+        # compile action
         else:
             if action[0] == 0:  # Z-Rotation
                 return qml.RZ(phi=action[2][0], wires=wire)
@@ -174,7 +178,6 @@ class CircuitDesigner(gym.Env):
         else:
             self._draw_circuit()  # render circuit only after each episode
             reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge, punish=True)
-            print(f'reward = {reward}')
 
         # evaluate additional information
         info = self._get_info()

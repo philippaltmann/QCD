@@ -78,6 +78,9 @@ class CircuitDesigner(gym.Env):
             {'real': Box(low=-1.0, high=+1.0, shape=(2**max_qubits, )),
              'imag': Box(low=-1.0, high=+1.0, shape=(2**max_qubits, ))})
 
+        # initialize reward class
+        self.reward = Reward(self.qubits, self.depth)
+
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
         wire = action[1][0]
@@ -178,7 +181,7 @@ class CircuitDesigner(gym.Env):
             reward = 0
         else:
             self._draw_circuit()  # render circuit only after each episode
-            reward = Reward(circuit, self.qubits, self.depth).compute_reward(self.challenge, punish=True)
+            reward = self.reward.compute_reward(circuit, self.challenge, punish=True)
 
         # evaluate additional information
         info = self._get_info()

@@ -1,10 +1,9 @@
-import math
-
 import numpy as np
 import re
 import pennylane as qml
 from scipy.stats import unitary_group
 from math import erf
+
 
 class Reward:
     """ Reward class for CircuitDesigner environment:
@@ -39,11 +38,11 @@ class Reward:
         task, param = re.split("-", challenge)
         if task == 'SP':  # StatePreparation
             reward = self._state_preparation(circuit, param)
+            if punish:
+                reward -= 0.1 * qml.specs(circuit)()['depth'] / self.depth
         elif task == 'UC':
             reward = self._unitary_composition(circuit, param)
         # and more to come...
-        if punish:
-            reward -= 0.1 * qml.specs(circuit)()['depth']/self.depth
         return reward
 
     # REWARD FUNCTIONS:
@@ -54,7 +53,7 @@ class Reward:
         # compute output state of designed circuit
         state = np.array(circuit())
         # define target state based on param-string
-        if param == 'random': # random state
+        if param == 'random':  # random state
             target = self.random_state
         elif param == 'bell':  # 2-qubit Bell State
             target = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=np.complex128)
@@ -81,23 +80,21 @@ class Reward:
             = 1 - erf(norm(U_composed - U_target)) with U_target defined by param. """
         # compute matrix representation of designed circuit
         order = list(range(self.qubits))
-        matrix = qml.matrix(circuit(), wire_order=order)
+        matrix = qml.matrix(circuit, wire_order=order)()
         # compute Frobenius norm of difference between target and output matrix
         if param == 'random':
             norm = np.linalg.norm(self.random_op - matrix)
         elif param == 'hadamard':
             target = qml.matrix(qml.Hadamard(0), wire_order=order)
-            norm = np.np.linalg.norm(target - matrix)
+            norm = np.linalg.norm(target - matrix)
         elif param == 'toffoli':
             assert self.qubits >= 3, "to build Toffoli gate you need at least three wires/qubits."
             target = qml.matrix(qml.Toffoli([0, 1, 2]), wire_order=order)
-            norm = np.np.linalg.norm(target - matrix)
+            norm = np.linalg.norm(target - matrix)
         else:
             raise ValueError(f'desired target unitary {param} is not defined in this reward function.'
                              f'See attribute "unitaries" for a list of available operations.')
-
         return 1 - erf(norm)
-
 
     # UTILITY FUNCTIONS:
     @staticmethod

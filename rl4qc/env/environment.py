@@ -50,7 +50,7 @@ class CircuitDesigner(gym.Env):
 
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, max_qubits: int, max_depth: int, challenge: str):
+    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish = True):
         super().__init__()
 
         # define parameters
@@ -68,7 +68,7 @@ class CircuitDesigner(gym.Env):
         self.device = qml.device('default.qubit', wires=max_qubits)
 
         # define action space
-        self._action_space = Tuple((Box(low=0, high=5, dtype=np.int_),  # operation type (gate, measurement, terminate)
+        self._action_space = Tuple((Box(low=0, high=4, dtype=np.int_),  # operation type (gate, measurement, terminate)
                                     Box(low=0, high=max_qubits, dtype=np.int_),  # qubit(s) for operation
                                     Box(low=0, high=2*np.pi, shape=(2,))))  # additional continuous parameters
         self.action_space = flatten_space(self._action_space)  # flatten for training purposes
@@ -80,6 +80,7 @@ class CircuitDesigner(gym.Env):
 
         # initialize reward class
         self.reward = Reward(self.qubits, self.depth)
+        self.punish = punish
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
@@ -105,7 +106,7 @@ class CircuitDesigner(gym.Env):
                     return "disabled"
                 else:
                     return qml.CNOT(wires=[control, wire])
-            elif action[0] == 3:  # mid-circuit measurement
+            elif action[0] == 4:  # mid-circuit measurement
                 self._disabled.append(wire)
                 return int(wire)
 
@@ -161,7 +162,7 @@ class CircuitDesigner(gym.Env):
         else:
             truncated = False
             # determine what action to take
-            if action[0] == 4 or len(self._disabled) == self.qubits:
+            if (action[0] == 3 or len(self._disabled) == self.qubits) and len(self._operations) != 0:
                 terminated = True
             else:
                 terminated = False
@@ -181,7 +182,7 @@ class CircuitDesigner(gym.Env):
             reward = 0
         else:
             self._draw_circuit()  # render circuit only after each episode
-            reward = self.reward.compute_reward(circuit, self.challenge, punish=True)
+            reward = self.reward.compute_reward(circuit, self.challenge, self.punish)
 
         # evaluate additional information
         info = self._get_info()

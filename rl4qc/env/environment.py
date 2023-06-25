@@ -14,7 +14,8 @@ from .rewards import Reward
 import logging
 gym.logger.setLevel(logging.ERROR)
 logging.getLogger().setLevel(logging.ERROR)
-# TODO: this doesn't work, unfortunately --> figure out how to disable warnings!
+import warnings
+warnings.simplefilter(action='ignore', category=np.ComplexWarning)
 
 
 class CircuitDesigner(gym.Env):
@@ -34,7 +35,7 @@ class CircuitDesigner(gym.Env):
         quantum device to use (see PennyLane)
 
     action_space : gymnasium.spaces
-        action space consisting of (gate: Discrete, target qubit: Discrete, params: Box)
+        action space consisting of (gate: Box (int), target qubit: Box (int), params: Box (float))
     observation_space : gymnasium.spaces
         complex observation of state in the computational basis as a Box with [real, imag]
 

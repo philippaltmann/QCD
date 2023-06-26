@@ -154,18 +154,20 @@ class CircuitDesigner(gym.Env):
         # unflatten action for interpretation
         action = unflatten(self._action_space, action)
 
+        # initialize dones
+        terminated = False
+        truncated = False
         # check truncation criterion
         specs = self._get_info()
         if specs['depth'] >= self.depth:
             truncated = True
-            terminated = False
         else:
-            truncated = False
             # determine what action to take
-            if (action[0] == 3 or len(self._disabled) == self.qubits) and len(self._operations) != 0:
-                terminated = True
+            if (action[0] == 3 or len(self._disabled) == self.qubits):
+                # skipping termination actions at the beginning of episode
+                if len(self._operations) != 0:
+                    terminated = True
             else:
-                terminated = False
                 # conduct action
                 operation = self._action_to_operation(action)
                 if operation != "disabled":
@@ -181,7 +183,7 @@ class CircuitDesigner(gym.Env):
         if not terminated and not truncated:
             reward = 0
         else:
-            self._draw_circuit()  # render circuit only after each episode
+            self._draw_circuit()  # render circuit after each episode
             reward = self.reward.compute_reward(circuit, self.challenge, self.punish)
 
         # evaluate additional information

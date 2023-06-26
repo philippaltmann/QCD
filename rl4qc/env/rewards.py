@@ -77,7 +77,7 @@ class Reward:
 
     def _unitary_composition(self, circuit, param):
         """ Compute Reward for Unitary Composition (UC) task
-            = 1 - erf(norm(U_composed - U_target)) with U_target defined by param. """
+            = 1 - 2* arctan(norm(U_composed - U_target)) / pi with U_target defined by param. """
         # compute matrix representation of designed circuit
         order = list(range(self.qubits))
         matrix = qml.matrix(circuit, wire_order=order)()
@@ -94,7 +94,7 @@ class Reward:
         else:
             raise ValueError(f'desired target unitary {param} is not defined in this reward function.'
                              f'See attribute "unitaries" for a list of available operations.')
-        return 1 - erf(norm)
+        return 1 - 2*np.arctan(norm)/np.pi
 
     # UTILITY FUNCTIONS:
     @staticmethod

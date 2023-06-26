@@ -31,6 +31,8 @@ class CircuitDesigner(gym.Env):
         maximum depth desired for quantum circuit
     challenge : str
         RL challenge for which the circuit is to be built (see Reward class)
+    punish: bool
+        specifies whether depth of circuit should be punished
     device : qml.device
         quantum device to use (see PennyLane)
 

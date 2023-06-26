@@ -109,6 +109,7 @@ class CircuitDesigner(gym.Env):
                 else:
                     return qml.CNOT(wires=[control, wire])
             elif action[0] == 4:  # mid-circuit measurement
+                " this is currently turned off (by definition of the action space) "
                 self._disabled.append(wire)
                 return int(wire)
 

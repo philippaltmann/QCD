@@ -8,7 +8,6 @@ max_qubits = 2
 max_depth = 8
 
 challenge = 'SP-bell'
-# challenge = 'UC-toffoli'
 
 #%% BUILD ENVIRONMENT
 from gymnasium.utils.env_checker import check_env
@@ -83,7 +82,6 @@ model.save("models/SP-bell-25kfull")
 #%% or simply upload trained version
 from stable_baselines3 import PPO
 model = PPO.load("models/SP-bell-25k")
-# model = PPO.load("models/UC-toffoli-25k")
 
 #%% EVALUATE AGENT
 from stable_baselines3.common.evaluation import evaluate_policy

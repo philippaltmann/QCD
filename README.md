@@ -66,14 +66,14 @@ Therefore the action space is a flattened Tuple (instance of `gym.spaces`) with 
 | ----- | ------- | ----------------- | :----------------------------------------- |
 | 0     | `int`   | [0, 3]            | specifying action (gate or terminate)      |
 | 1     | `int`   | [0, `max_qubits`) | specifying qubit/wire to apply the gate to |
-| 2     | `float` | [0, 2$\pi$]       | continuous parameter $\phi$                |
-| 3     | `float` | [0, 2$\pi$]       | continuous parameter $\theta$              |
+| 2     | `float` | [0, 2 $\pi$]       | continuous parameter $\phi$                |
+| 3     | `float` | [0, 2 $\pi$]       | continuous parameter $\theta$              |
 
 [^1]: http://arxiv.org/pdf/2103.07585v1 "Quantum circuit optimization with deep reinforcement learning"
 
 ### *Observations*
 
-The state observation returned by the environment is the complex quantum state $$\ket{\psi} \in \mathcal C ^{n}$$ with $n = 2^{\textit{max_qubits}}$ in the computational basis of the quantum system. The initial state of the environment is chosen as $$\ket{\psi_{\text{init}} = \ket{0}^{\otimes n}$$.
+The state observation returned by the environment is the complex quantum state $\ket{\psi} \in \mathbb{C} ^{n}$ with $n = 2^{\mathrm{maxqubits}}$ in the computational basis of the quantum system. The initial state of the environment is chosen as $\ket{\psi_{\text{init}}} = \ket{0}^{\otimes n}$.
 
 ### *Challenges*
 
@@ -82,15 +82,15 @@ Currently, there are two RL challenges implemented within the environment:
 ##### State Preparation `'SP'`
 
 The objective of this challenge is to construct a quantum circuit that generates a desired quantum state (e.g. the GHZ state).
-For the reward function, the distance metric called *fidelity* $$\mathcal{F} = |\ket{\psi_{\text{env}}}\bra{\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
+For the reward function, the distance metric called ***fidelity*** $$\mathcal{F} = |\ket{\psi_{\text{env}}}\bra{\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
 
-currently available states for this challenge: `'SP-random'` (a random state over *max_qubits* ), `'SP-bell'` (the 2-qubit Bell state), `'SP-ghz**N**'` (the ***N*** qubit GHZ state)
+--> currently available states for this challenge: `'SP-random'` (a random state over *max_qubits* ), `'SP-bell'` (the 2-qubit Bell state), `'SP-ghz**N**'` (the ***N*** qubit GHZ state)
 
 ##### Unitary Composition `'UC'`
 
-The objective of this challenge is to construct a quantum circuit with a given finite set of gates that implements a desired unitary transformation/operation. For the reward function, an 1-arctan mapping of the *Frobenius norm* $$|U_{\text{env}} - U_{\text{target}}|_2$$ to the interval $[0,1]$ is chosen.
+The objective of this challenge is to construct a quantum circuit with a given finite set of gates that implements a desired unitary transformation/operation. For the reward function, an 1-arctan mapping of the ***Frobenius norm*** $$|U_{\text{env}} - U_{\text{target}}|_2$$ to the interval $[0,1]$ is chosen.
 
-currently available unitaries for this challenge: `'UC-random'` (a random unitary operation on *max_qubits* ), `'UC-hadamard'` (the single qubit Hadamard gate), `'UC-toffoli'` (the 3-qubit Toffoli gate)
+--> currently available unitaries for this challenge: `'UC-random'` (a random unitary operation on *max_qubits* ), `'UC-hadamard'` (the single qubit Hadamard gate), `'UC-toffoli'` (the 3-qubit Toffoli gate)
 
 See [Outlook](#outlook-&-todos) for more challenges to come...
 
@@ -138,7 +138,7 @@ for _ in range(100):
 
 This shows a plot of the built circuit after each episode:
 
-![example_circuit](/Users/adelina/Library/Mobile Documents/com~apple~CloudDocs/QARlab/Paper Project/example_circuit.png)
+![example_circuit](/models/example_circuit.png)
 
 ## **Outlook & ToDos**
 

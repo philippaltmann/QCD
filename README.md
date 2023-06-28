@@ -73,7 +73,7 @@ Therefore the action space is a flattened Tuple (instance of `gym.spaces`) with 
 
 ### *Observations*
 
-The state observation returned by the environment is the complex quantum state $\ket{\psi} \in \mathbb{C} ^{n}$ with $n = 2^{\mathrm{maxqubits}}$ in the computational basis of the quantum system. The initial state of the environment is chosen as $\ket{\psi_{\text{init}}} = \ket{0}^{\otimes n}$.
+The state observation returned by the environment is the complex quantum state $\ket{\psi} \in \mathbb{C} ^{n}$ with $n = 2^{\mathrm{qubits}}$ in the computational basis of the quantum system. The initial state of the environment is chosen as $\ket{\psi_{\text{init}}} = \ket{0}^{\otimes n}$.
 
 ### *Challenges*
 
@@ -84,15 +84,21 @@ Currently, there are two RL challenges implemented within the environment:
 The objective of this challenge is to construct a quantum circuit that generates a desired quantum state (e.g. the GHZ state).
 For the reward function, the distance metric called ***fidelity*** $$\mathcal{F} = |\ket{\psi_{\text{env}}}\bra{\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
 
---> currently available states for this challenge: `'SP-random'` (a random state over *max_qubits* ), `'SP-bell'` (the 2-qubit Bell state), `'SP-ghz**N**'` (the ***N*** qubit GHZ state)
+###### currently available states for this challenge: 
+- `'SP-random'` (a random state over *max_qubits* )
+- `'SP-bell'` (the 2-qubit Bell state)
+- `'SP-ghz**N**'` (the ***N*** qubit GHZ state)
 
 ##### Unitary Composition `'UC'`
 
 The objective of this challenge is to construct a quantum circuit with a given finite set of gates that implements a desired unitary transformation/operation. For the reward function, an 1-arctan mapping of the ***Frobenius norm*** $$|U_{\text{env}} - U_{\text{target}}|_2$$ to the interval $[0,1]$ is chosen.
 
---> currently available unitaries for this challenge: `'UC-random'` (a random unitary operation on *max_qubits* ), `'UC-hadamard'` (the single qubit Hadamard gate), `'UC-toffoli'` (the 3-qubit Toffoli gate)
+###### currently available unitaries for this challenge: 
+- `'UC-random'` (a random unitary operation on *max_qubits* )
+- `'UC-hadamard'` (the single qubit Hadamard gate)
+- `'UC-toffoli'` (the 3-qubit Toffoli gate)
 
-See [Outlook](#outlook-&-todos) for more challenges to come...
+See [Outlook](#outlook-and-todos) for more challenges to come...
 
 ### *Further Objectives*
 
@@ -106,7 +112,7 @@ The goal of this implementation is to not only construct any circuit that fulfil
 
 These circuit optimization objectives can be switched on by the parameter `punish` when initializing a new environment. 
 
-Currently, the only further objective implemented in this environment is the **circuit depth**, as this is one of the most important features to restrict for NISQ (noisy, intermediate-scale, quantum) devices. This metric already includes gate count and parameter count to some extent. However, further objectives can easily be added within the `Reward` class of this environment (see [Outlook](#outlook-&-todos)).
+Currently, the only further objective implemented in this environment is the **circuit depth**, as this is one of the most important features to restrict for NISQ (noisy, intermediate-scale, quantum) devices. This metric already includes gate count and parameter count to some extent. However, further objectives can easily be added within the `Reward` class of this environment (see [Outlook](#outlook-and-todos)).
 
 
 
@@ -118,7 +124,7 @@ import gymnasium as gym
 
 # specify environmental parameters
 max_qubits = 2
-max_depth = 8
+max_depth = 10
 challenge = 'SP-bell'
 
 # initalize environment
@@ -140,7 +146,7 @@ This shows a plot of the built circuit after each episode:
 
 ![example_circuit](/models/example_circuit.png)
 
-## **Outlook & ToDos**
+## **Outlook and ToDos**
 
 - [ ] Implement more challenges for the environment (e.g. ansatz search, optimal control, maximal entanglement, etc.)
 

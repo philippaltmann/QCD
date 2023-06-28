@@ -5,7 +5,7 @@ import gymnasium as gym
 
 #%% DEFINE CRUCIAL PARAMETERS
 max_qubits = 2
-max_depth = 8
+max_depth = 15
 
 challenge = 'SP-bell'
 

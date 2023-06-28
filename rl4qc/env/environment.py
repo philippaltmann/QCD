@@ -8,14 +8,11 @@ import pennylane as qml
 import numpy as np
 import re
 
-from .rewards import Reward
-
 # disable warnings
-import logging
-gym.logger.setLevel(logging.ERROR)
-logging.getLogger().setLevel(logging.ERROR)
 import warnings
 warnings.simplefilter(action='ignore', category=np.ComplexWarning)
+
+from .rewards import Reward
 
 
 class CircuitDesigner(gym.Env):
@@ -52,7 +49,7 @@ class CircuitDesigner(gym.Env):
 
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish = True):
+    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True):
         super().__init__()
 
         # define parameters
@@ -166,7 +163,7 @@ class CircuitDesigner(gym.Env):
             truncated = True
         else:
             # determine what action to take
-            if (action[0] == 3 or len(self._disabled) == self.qubits):
+            if action[0] == 3 or len(self._disabled) == self.qubits:
                 # skipping termination actions at the beginning of episode
                 if len(self._operations) != 0:
                     terminated = True

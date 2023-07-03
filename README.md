@@ -54,7 +54,7 @@ The action space of the environment consists of the **universal gate set**[^1]
 
 + `Z-Rotation`: $$R_Z(\theta) = \exp(-\text{i} \frac{\theta}{2} Z)$$
 + `Phased X`: $$P_X(\theta, \phi) = \exp(\text{i}\theta Z) \cdot \exp(\text{i}\phi X) \cdot \exp(-\text{i}\theta Z)$$
-+ `CNOT`: $$\text{CNOT}\ket{a} \ket{b} = \ket{a} \ket{a \bigoplus b}$$
++ `CNOT`: $$\text{CNOT}\ket{a} \ket{b} = \ket{a} \ket{a \oplus b}$$
 
 and the additional action `Terminate` which actively terminates an episode.
 

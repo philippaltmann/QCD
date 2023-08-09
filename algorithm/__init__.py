@@ -1,0 +1,1 @@
+from algorithm.algorithm import TrainableAlgorithm

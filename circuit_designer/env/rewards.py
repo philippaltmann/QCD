@@ -39,7 +39,7 @@ class Reward:
         if task == 'SP':  # StatePreparation
             reward = self._state_preparation(circuit, param)
             if punish:
-                reward -= 0.1 * qml.specs(circuit)()['depth'] / self.depth
+                reward -= 0.1 * qml.specs(circuit)()["resources"].depth / self.depth
         elif task == 'UC':
             reward = self._unitary_composition(circuit, param)
         # and more to come...

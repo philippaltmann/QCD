@@ -8,7 +8,7 @@ for ALG in 'PPO' 'SAC' ; do # 'TD3' 'A2C'
     for DELTA in 10; do # 5, 20
       O="results/out/$ENV-$ETA-$DELTA/$ALG"; mkdir -p "$O"
       echo "Running $ALG in $ENV ($ETA | $DETLA) [SEED $SEED]" &> "$O/$SEED.out"
-      python -m run $ALG -e $ENV-q$ETA-d$DELTA -s $SEED &> "$O/$RUN.out"
+      python3 -m train $ALG -e $ENV-q$ETA-d$DELTA -s $SEED &> "$O/$RUN.out"
     done
   done
 done

@@ -3,6 +3,7 @@ from gymnasium.spaces import Tuple, Box, Dict
 
 from gymnasium.spaces.utils import flatten_space
 from gymnasium.spaces.utils import unflatten
+from gymnasium.utils import seeding
 
 import pennylane as qml
 import numpy as np
@@ -47,10 +48,12 @@ class CircuitDesigner(gym.Env):
 
     """
 
-    metadata = {"render_modes": ["human"]}
+    metadata = {"render_modes": ["image","text"], "render_fps": 30}
 
-    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True):
+    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True, seed=None, render_mode=None):
         super().__init__()
+        if seed is not None: self._np_random, seed = seeding.np_random(seed)
+        self.render_mode = render_mode; self.name = f"{challenge}|{max_qubits}-{max_depth}"
 
         # define parameters
         self.qubits = max_qubits  # the (maximal) number of available qubits
@@ -64,11 +67,11 @@ class CircuitDesigner(gym.Env):
                              f'See attribute "challenges" for a list of available challenges')
 
         # initialize quantum device to use for QNode
-        self.device = qml.device('default.qubit', wires=max_qubits)
+        self.device = qml.device('lightning.qubit', wires=max_qubits) #default.qubit
 
         # define action space
-        self._action_space = Tuple((Box(low=0, high=4, dtype=np.int_),  # operation type (gate, measurement, terminate)
-                                    Box(low=0, high=max_qubits, dtype=np.int_),  # qubit(s) for operation
+        self._action_space = Tuple((Box(low=0, high=5),  # operation type (gate, measurement, terminate)
+                                    Box(low=0, high=max_qubits+1),  # qubit(s) for operation
                                     Box(low=0, high=2*np.pi, shape=(2,))))  # additional continuous parameters
         self.action_space = flatten_space(self._action_space)  # flatten for training purposes
 
@@ -83,20 +86,15 @@ class CircuitDesigner(gym.Env):
 
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
-        wire = action[1][0]
-        # check if wire is already disabled (due to prior measurement)
-        if wire in self._disabled:
-            return "disabled"
-        # check if wire is actually available
-        elif wire not in range(self.qubits):
-            return "disabled"
-        # compile action
-        else:
-            if action[0] == 0:  # Z-Rotation
+        gate, wire = int(np.floor(action[0][0])), int(np.floor(action[1][0]))
+        if wire in self._disabled: return "disabled" # check if wire is already disabled (due to prior measurement)
+        elif wire not in range(self.qubits): return "disabled" # check if wire is actually available
+        else: # compile action
+            if gate == 0:  # Z-Rotation
                 return qml.RZ(phi=action[2][0], wires=wire)
-            elif action[0] == 1:  # Phased-X
+            elif gate == 1:  # Phased-X
                 return self._PX(action[2][0], action[2][1], wire)
-            elif action[0] == 2:  # CNOT (only neighbouring qubits)
+            elif gate == 2:  # CNOT (only neighbouring qubits)
                 if action[2][0] <= action[2][1]:  # decide control qubit based on parameters
                     control = (wire-1) % self.qubits
                 else:
@@ -105,7 +103,7 @@ class CircuitDesigner(gym.Env):
                     return "disabled"
                 else:
                     return qml.CNOT(wires=[control, wire])
-            elif action[0] == 4:  # mid-circuit measurement
+            elif gate == 4:  # mid-circuit measurement
                 " this is currently turned off (by definition of the action space) "
                 self._disabled.append(wire)
                 return int(wire)
@@ -113,10 +111,8 @@ class CircuitDesigner(gym.Env):
     def _build_circuit(self):
         """ Quantum Circuit Function taking a list of quantum operations and returning state information """
         for op in self._operations:
-            if type(op) == int:
-                qml.measure(op)
-            else:
-                qml.apply(op)
+            if type(op) == int: qml.measure(op)
+            else: qml.apply(op)
         return qml.state()
 
     def _get_info(self):
@@ -124,16 +120,14 @@ class CircuitDesigner(gym.Env):
         circuit = qml.QNode(self._build_circuit, self.device)
         return qml.specs(circuit)()
 
-    def _draw_circuit(self):
+    def _draw_circuit(self) -> np.ndarray:
         """ Drawing given circuit using matplotlib."""
         circuit = qml.QNode(self._build_circuit, self.device)
-        fig, ax = qml.draw_mpl(circuit)()
-        fig.show()
+        return qml.draw(circuit)()
 
     def reset(self, seed=None, options=None):
         # set seed for random number generator
         super().reset(seed=seed)
-
         # start with an empty trajectory of operations
         self._operations = []
         # start with an empty list of disables qubits (due to measurement)
@@ -157,16 +151,17 @@ class CircuitDesigner(gym.Env):
         # initialize dones
         terminated = False
         truncated = False
+        info = {}
         # check truncation criterion
         specs = self._get_info()
-        if specs['depth'] >= self.depth:
-            truncated = True
+        if specs["resources"].depth >= self.depth: #specs['depth']
+            truncated = True; info['termination_reason'] = 'DEPTH'
         else:
             # determine what action to take
             if action[0] == 3 or len(self._disabled) == self.qubits:
                 # skipping termination actions at the beginning of episode
                 if len(self._operations) != 0:
-                    terminated = True
+                    terminated = True; info['termination_reason'] = 'DONE'
             else:
                 # conduct action
                 operation = self._action_to_operation(action)
@@ -183,16 +178,19 @@ class CircuitDesigner(gym.Env):
         if not terminated and not truncated:
             reward = 0
         else:
-            self._draw_circuit()  # render circuit after each episode
+            # self._draw_circuit()  # render circuit after each episode
             reward = self.reward.compute_reward(circuit, self.challenge, self.punish)
 
         # evaluate additional information
-        info = self._get_info()
+        info = {**self._get_info(), **info}
 
         return observation, reward, terminated, truncated, info
 
     def render(self):
-        return None
+        if self.render_mode is None: return None
+        if self.render_mode == 'text': return self._draw_circuit()
+        assert False, 'Not Implemented'
+        return self._draw_circuit()
 
     # PHASED-X Operator:
     @staticmethod

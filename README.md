@@ -140,7 +140,7 @@ for _ in range(100):
 
 This shows a plot of the built circuit after each episode:
 
-![example_circuit](/models/example_circuit.png)
+![example_circuit](/assets/example_circuit.png)
 
 ## **Outlook and ToDos**
 

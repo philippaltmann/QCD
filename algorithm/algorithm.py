@@ -16,7 +16,7 @@ from algorithm.evaluation import EvaluationCallback
 class TrainableAlgorithm(BaseAlgorithm):
   """ Generic Algorithm Class extending BaseAlgorithm with features needed by the training pipeline """
   def __init__(self, envs:List[str]=None, normalize:bool=False, policy:Union[str,Type[ActorCriticPolicy]]="MlpPolicy", path:Optional[str]=None, 
-               seed=None, silent=False, stop_on_reward=False, explore=False, log_name=None, factory=None, **kwargs):
+               seed=None, silent=False, stop_on_reward=False, explore=False, log_name=None, factory=None, envkwargs={}, **kwargs):
     """ :param env: The environment to learn from (if registered in Gym, can be str)
     :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...) defaults to MlpPolicy
     :param normalize: whether to use normalized observations, default: False
@@ -28,7 +28,7 @@ class TrainableAlgorithm(BaseAlgorithm):
     gen_seed = lambda s=random.randint(0, 999): s if not os.path.isdir(_path(s)) else gen_seed()
     if seed is None: seed = gen_seed()
     self.path = _path(seed) if path is not None else None; self.eval_frequency, self.progress_bar = None, None
-    if envs is not None: self.envs = factory(envs, seed=seed); 
+    if envs is not None: self.envs = factory(envs, seed=seed, **envkwargs); 
     self.explore = explore; self.stop_on_reward = stop_on_reward and not explore
     self.normalize, self.silent, self.continue_training = normalize, silent, True; 
     super().__init__(policy=policy, seed=seed, verbose=0, env=self.envs['train'], **kwargs)

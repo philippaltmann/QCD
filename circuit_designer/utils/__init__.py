@@ -1,1 +1,1 @@
-from circuit_designer.utils.factory import factory
+from circuit_designer.utils.factory import factory, named

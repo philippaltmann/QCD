@@ -78,7 +78,7 @@ Currently, there are two RL challenges implemented within the environment:
 #### State Preparation `'SP'`
 
 The objective of this challenge is to construct a quantum circuit that generates a desired quantum state (e.g. the GHZ state).
-For the reward function, the distance metric called ***fidelity*** $$\mathcal{F} = |\ket{\psi_{\text{env}}}\bra{\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
+For the reward function, the distance metric called ***fidelity*** $$\mathcal{F} = |\braket{\psi_{\text{env}}|\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
 
 ##### currently available states for this challenge
 

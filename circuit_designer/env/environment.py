@@ -60,6 +60,7 @@ class CircuitDesigner(gym.Env):
         if max_qubits < 2:
             raise ValueError('number of available qubits must be at least 2.')
         self.depth = max_depth  # the (maximal) available circuit depth
+        self.max_steps = max_depth * max_qubits * 2
         self.challenge = challenge  # challenge for reward computation
         task = re.split("-", self.challenge)[0]
         if task not in Reward.challenges:
@@ -111,14 +112,10 @@ class CircuitDesigner(gym.Env):
     def _build_circuit(self):
         """ Quantum Circuit Function taking a list of quantum operations and returning state information """
         for op in self._operations:
-            if type(op) == int: qml.measure(op)
+            if op == 'disabled': pass
+            elif type(op) == int: qml.measure(op)
             else: qml.apply(op)
         return qml.state()
-
-    def _get_info(self):
-        """ Dictionary of most important circuit properties."""
-        circuit = qml.QNode(self._build_circuit, self.device)
-        return qml.specs(circuit)()
 
     def _draw_circuit(self) -> np.ndarray:
         """ Drawing given circuit using matplotlib."""
@@ -139,7 +136,7 @@ class CircuitDesigner(gym.Env):
                        'imag': np.imag(np.array(circuit(), np.float32))}
 
         # evaluate additional (circuit) information
-        info = self._get_info()
+        info = qml.specs(circuit)()
 
         return observation, info
 
@@ -153,24 +150,21 @@ class CircuitDesigner(gym.Env):
         truncated = False
         info = {}
         # check truncation criterion
-        specs = self._get_info()
-        if specs["resources"].depth >= self.depth: #specs['depth']
+        circuit = qml.QNode(self._build_circuit, self.device)
+        specs = qml.specs(circuit)()
+
+        if specs["resources"].depth >= self.depth or len(self._operations) >= self.max_steps:
             truncated = True; info['termination_reason'] = 'DEPTH'
         else:
             # determine what action to take
-            if action[0] == 3 or len(self._disabled) == self.qubits:
-                # skipping termination actions at the beginning of episode
-                if len(self._operations) != 0:
-                    terminated = True; info['termination_reason'] = 'DONE'
+            if action[0] == 3 or len(self._disabled) >= self.qubits:
+                terminated = True; info['termination_reason'] = 'DONE'
             else:
-                # conduct action
+                # conduct action & update action trajectory
                 operation = self._action_to_operation(action)
-                if operation != "disabled":
-                    # update action trajectory
-                    self._operations.append(operation)
+                self._operations.append(operation)
 
         # compute state observation
-        circuit = qml.QNode(self._build_circuit, self.device)
         observation = {'real': np.real(np.array(circuit(), np.float32)),
                        'imag': np.imag(np.array(circuit(), np.float32))}
 
@@ -178,19 +172,16 @@ class CircuitDesigner(gym.Env):
         if not terminated and not truncated:
             reward = 0
         else:
-            # self._draw_circuit()  # render circuit after each episode
             reward = self.reward.compute_reward(circuit, self.challenge, self.punish)
 
         # evaluate additional information
-        info = {**self._get_info(), **info}
+        info = {**specs, **info}
 
         return observation, reward, terminated, truncated, info
 
     def render(self):
         if self.render_mode is None: return None
         if self.render_mode == 'text': return self._draw_circuit()
-        assert False, 'Not Implemented'
-        return self._draw_circuit()
 
     # PHASED-X Operator:
     @staticmethod

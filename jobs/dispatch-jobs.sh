@@ -5,6 +5,6 @@ for SEED in 1 2; do
         echo "$SEED-$ETA"
         tmux new-session -t "run-$SEED-$ETA" -d
         tmux send-keys -t "run-$SEED-$ETA" "jobs/job.sh $SEED $ETA" C-m
-        #tmux kill-session -t "run-$SEED-$ETA"
+        # tmux kill-session -t "run-$SEED-$ETA"
     done
 done

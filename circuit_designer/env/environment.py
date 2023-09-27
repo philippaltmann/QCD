@@ -72,7 +72,7 @@ class CircuitDesigner(gym.Env):
 
         # define action space
         self._action_space = Tuple((Box(low=0, high=5),  # operation type (gate, measurement, terminate)
-                                    Box(low=0, high=max_qubits+1),  # qubit(s) for operation
+                                    Box(low=0, high=max_qubits),#+1  # qubit(s) for operation
                                     Box(low=0, high=2*np.pi, shape=(2,))))  # additional continuous parameters
         self.action_space = flatten_space(self._action_space)  # flatten for training purposes
 

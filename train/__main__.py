@@ -9,7 +9,7 @@ parser.add_argument('method', help='The algorithm to use', choices=[*ALGS])
 parser.add_argument( '-e', dest='envs', nargs='+', default=['Maze7Target'], metavar="Environment", help='The name and spec and of the safety environments to train and test the agent. Usage: --env NAME, CONFIG, N_TRAIN, N_TEST')
 
 parser.add_argument('-s', dest='seed', type=int, help='The random seed. If not specified a free seed [0;999] is randomly chosen')
-parser.add_argument('-t', dest='timesteps', type=int, help='The number of timesteps to explore.', default=120*(2048*4)) #~10e5
+parser.add_argument('-t', dest='timesteps', type=int, help='The number of timesteps to explore.', default=40*(2048*4)) #~10e5
 parser.add_argument('--load', type=str, help='Path to load the model.')
 parser.add_argument('--test', help='Run in test mode (dont write log files).', action='store_true')
 parser.add_argument('--stop', dest='stop_on_reward', help='Stop at reward threshold.', action='store_true') # TODO: test
@@ -28,7 +28,6 @@ args['policy'] = 'MultiInputPolicy'
  
 model = trainer(**args, factory=factory)
 model._naming = {**model._naming , 'd': 'depth-100', 'q': 'qbits-100', 'o': 'ops-100'}
-
 
 if load is not None:
   _params = model.get_parameters()['policy'].copy().__str__()

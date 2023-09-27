@@ -10,9 +10,9 @@ class EvaluationCallback(BaseCallback):
   :param eval_envs: A dict containing environments for testing the current model.
   :param stop_on_reward: Whether to use early stopping. Defaults to True
   :param reward_threshold: The reward threshold to stop at."""
-  def __init__(self, model: BaseAlgorithm, eval_envs: dict, stop_on_reward:float=None, record_video:bool=True, write_heatmaps:bool=True, run_test:bool=True):
+  def __init__(self, model: BaseAlgorithm, eval_envs: dict, stop_on_reward:float=None, record_video:bool=True, run_test:bool=True):
     super(EvaluationCallback, self).__init__(); self.model = model; self.writer: SummaryWriter = self.model.writer
-    self.eval_envs = eval_envs; self.record_video = record_video; self.write_heatmaps = write_heatmaps; self.run_test = run_test
+    self.eval_envs = eval_envs; self.record_video = record_video; self.run_test = run_test
     self.stop_on_reward = lambda r: (stop_on_reward is not None and r >= stop_on_reward) or not self.model.continue_training
     if stop_on_reward is not None: print(f"Stopping at {stop_on_reward}"); assert run_test, f"Can't stop on reward {stop_on_reward} without running test episodes"
     if record_video: assert run_test, f"Can't record video without running test episodes"

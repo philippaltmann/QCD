@@ -79,6 +79,7 @@ class Reward:
         """ Compute Reward for Unitary Composition (UC) task
             = 1 - 2* arctan(norm(U_composed - U_target)) / pi with U_target defined by param. """
         # compute matrix representation of designed circuit
+        if qml.specs(circuit)()["resources"].num_gates == 0: return 0
         order = list(range(self.qubits))
         matrix = qml.matrix(circuit, wire_order=order)()
         # compute Frobenius norm of difference between target and output matrix

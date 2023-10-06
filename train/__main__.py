@@ -34,7 +34,7 @@ if load is not None:
   model.set_parameters({**model.get_parameters(), 'policy': model.policy.load(load).state_dict()}) # v2: load policy from file
   assert _params != model.get_parameters()['policy'].copy().__str__(), "Load failed"
 
-print(f"Training {trainer.__name__ } in {model.envs['train'].envs[0].name} for {timesteps-presteps:.0f} steps.") 
+print(f"Training {trainer.__name__ } in {model.envs['train'].envs[0].unwrapped.name} for {timesteps-presteps:.0f} steps.") 
 model.learn(total_timesteps=timesteps-presteps) #, reset_num_timesteps = not pretrain
 if model.path: model.save()
 print(f"Done in {time.time()-start}")

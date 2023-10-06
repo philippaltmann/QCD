@@ -145,7 +145,7 @@ class TrainableAlgorithm(BaseAlgorithm):
     hp_str = {k:str(v) for k,v in hparams.items() if isinstance(v, (str, list))}
     hp_mdd = {k:v for k,v in hparams.items() if isinstance(v, (dict, th.Tensor))} #list
     assert not len(hp_mdd), "Skipped writing hparams of multi-dimensional data"
-    return {**hp_dis, **hp_num, **hp_str, **{'env_name': self.env.get_attr('name')[0]}}
+    return {**hp_dis, **hp_num, **hp_str, **{'env_name': self.env.envs[0].unwrapped.name}}
   
   def save(self, name="/model/train", **kwargs) -> None: 
     kwargs['path'] = self.path + name; super(TrainableAlgorithm, self).save(**kwargs)

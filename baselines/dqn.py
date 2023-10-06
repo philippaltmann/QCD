@@ -5,6 +5,6 @@ class DQN(TrainableAlgorithm, StableDQN):
   """A Trainable extension to DQN using HER"""
   n_steps = 1 # For unified logging
   def __init__(self, policy="MultiInputPolicy", **kwargs): #replay_buffer_class = HerReplayBuffer,
-    super().__init__(policy=policy, envkwargs={'discrete':True}, **kwargs)
+    super().__init__(policy=policy, **kwargs) # envkwargs={'discrete':True},
 
 

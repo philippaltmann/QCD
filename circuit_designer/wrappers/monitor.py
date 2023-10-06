@@ -8,9 +8,9 @@ class Monitor(gym.Wrapper[ObsType, ActType, ObsType, ActType]):
   :param env: The environment """
   def __init__( self, env: gym.Env, record_video=False, rescale=True, discrete=False):
     super().__init__(env=env); self.t_start = time.time(); self.rescale = rescale
-    if self.rescale:
-      _l = self.action_space.low; _h = self.action_space.high
-      self._rescale = lambda action: np.clip((_l+ 0.5 * (action + 1.0)) * (_h - _l), _l, _h)
+    # if self.rescale:
+    #   _l = self.action_space.low; _h = self.action_space.high
+    #   self._rescale = lambda action: np.clip((_l+ 0.5 * (action + 1.0)) * (_h - _l), _l, _h)
     self.record_video = record_video; self._frame_buffer = []; self.discrete = discrete
     if discrete: self.action_space = gym.spaces.Discrete(1334*self.qubits+1)
     self.states: list = [np.ndarray]; self.actions:list = [np.ndarray]; self.rewards: list[float] = []
@@ -53,7 +53,7 @@ class Monitor(gym.Wrapper[ObsType, ActType, ObsType, ActType]):
     :param action: the action
     :return: observation, reward, terminated, truncated, information """
     if self.needs_reset: raise RuntimeError("Tried to step environment that needs reset")
-    if self.rescale: action = self._rescale(action)
+    # if self.rescale: action = self._rescale(action)
     # if self.discrete: action = self._discrete(action)
     state, reward, terminated, truncated, info = self.env.step(action)
     self.states.append(state); self.actions.append(action); self.rewards.append(float(reward))
@@ -65,9 +65,9 @@ class Monitor(gym.Wrapper[ObsType, ActType, ObsType, ActType]):
       self._termination_reasons.append(info.pop('termination_reason'))
       self._episode_lengths.append(ep_len); self._episode_times.append(time.time() - self.t_start)
 
-      ep_info['d'] = info['depth']
-      ep_info['q'] = info['num_used_wires']
-      ep_info['o'] = info['num_operations']
+      ep_info['d'] = info["resources"].depth      # ['depth']
+      ep_info['q'] = info["resources"].num_wires  # ['num_used_wires']
+      ep_info['o'] = info["resources"].num_gates  # ['num_operations']
       info["episode"] = ep_info
 
     self._total_steps += 1

@@ -36,12 +36,11 @@ class Reward:
     def compute_reward(self, circuit, challenge, punish):
         """ Wrapper function mapping challenge to corresponding reward function. """
         task, param = re.split("-", challenge)
-        if task == 'SP':  # StatePreparation
-            reward = self._state_preparation(circuit, param)
-            if punish:
-                reward -= 0.1 * qml.specs(circuit)()["resources"].depth / self.depth
-        elif task == 'UC':
-            reward = self._unitary_composition(circuit, param)
+        # print(qml.draw(circuit)())
+        if task == 'SP': reward = self._state_preparation(circuit, param)     # StatePreparation
+        elif task == 'UC': reward = self._unitary_composition(circuit, param) # Unitary Composition
+        if punish: reward -= (qml.specs(circuit)()["resources"].depth - self.depth/3) / (self.depth / 2 * 3)  # 1/3 deph overhead to solution
+
         # and more to come...
         return reward
 
@@ -52,25 +51,19 @@ class Reward:
 
         # compute output state of designed circuit
         state = np.array(circuit())
+        # state = state[:int(state.shape[0]/2)]
         # define target state based on param-string
-        if param == 'random':  # random state
-            target = self.random_state
-        elif param == 'bell':  # 2-qubit Bell State
-            target = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=np.complex128)
+        if param == 'random': target = self.random_state
+        elif param == 'bell': target = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=np.complex128)
         elif param[:3] == 'ghz':  # n-qubit GHZ State
-            n = int(param[3:])
-            assert n >= 2, "GHZ entangled state must have at least 2 qubits. " \
-                           "\n For N=2: GHZ state is equal to Bell state."
-            assert n <= self.qubits, "Target GHZ state cannot consist of more qubits " \
-                                     "than are available within the circuit environment."
+            n = int(param[-1:])
             target = np.zeros(shape=(2**n,), dtype=np.complex128)
             target[0] = target[-1] = 1/np.sqrt(2)
-        else:
-            raise ValueError(f'desired target state {param} is not defined in this reward function.'
-                             f'See attribute "states" for a list of available states.')
+        else: raise ValueError(f'desired target state {param} is not defined in this reward function.'
+                               f'See attribute "states" for a list of available states.')
 
         # make up for possibly unused qubits (transform to basis of output state)
-        target = np.array(qml.QNode(self._state_transform, circuit.device)(target))
+        # target = np.array(qml.QNode(self._state_transform, circuit.device)(target))
         # compute fidelity between target and output state within [0,1]
         fidelity = abs(np.vdot(state, target))**2
         return fidelity
@@ -81,20 +74,14 @@ class Reward:
         # compute matrix representation of designed circuit
         if qml.specs(circuit)()["resources"].num_gates == 0: return 0
         order = list(range(self.qubits))
-        matrix = qml.matrix(circuit, wire_order=order)()
+        matrix = qml.matrix(circuit, wire_order=order)().astype(np.complex128)
         # compute Frobenius norm of difference between target and output matrix
-        if param == 'random':
-            norm = np.linalg.norm(self.random_op - matrix)
-        elif param == 'hadamard':
-            target = qml.matrix(qml.Hadamard(0), wire_order=order)
-            norm = np.linalg.norm(target - matrix)
-        elif param == 'toffoli':
-            assert self.qubits >= 3, "to build Toffoli gate you need at least three wires/qubits."
-            target = qml.matrix(qml.Toffoli([0, 1, 2]), wire_order=order)
-            norm = np.linalg.norm(target - matrix)
-        else:
-            raise ValueError(f'desired target unitary {param} is not defined in this reward function.'
-                             f'See attribute "unitaries" for a list of available operations.')
+        if param == 'random': target = self.random_op
+        elif param == 'hadamard': target = qml.matrix(qml.Hadamard(0), wire_order=order)
+        elif param == 'toffoli': target = qml.matrix(qml.Toffoli([0, 1, 2]), wire_order=order)
+        else: raise ValueError(f'desired target unitary {param} is not defined in this reward function.'
+                               f'See attribute "unitaries" for a list of available operations.')
+        norm = np.linalg.norm(target - matrix)
         return 1 - 2*np.arctan(norm)/np.pi
 
     # UTILITY FUNCTIONS:

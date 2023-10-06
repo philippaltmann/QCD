@@ -24,7 +24,7 @@ load = args.pop('load', None)
 
 # Init Training Model
 trainer = eval(args.pop('method'))
-args['policy'] = 'MultiInputPolicy'
+# args['policy'] = 'MultiInputPolicy'
  
 model = trainer(**args, factory=factory)
 model._naming = {**model._naming , 'd': 'depth-100', 'q': 'qbits-100', 'o': 'ops-100'}

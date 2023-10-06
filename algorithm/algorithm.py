@@ -103,6 +103,9 @@ class TrainableAlgorithm(BaseAlgorithm):
     summary.update(self.prepare_ci({t: {step: v} for t, v in metrics.items() if isinstance(v, np.ndarray)}))
     
     #Write metrcis summary to tensorboard 
+    _r = {'DEPTH': 0, 'DONE':1} # TODO: meassure 2?
+    resons = np.array([_r[r] for e in self.env.envs for r in e.termination_reasons])
+    self.writer.add_histogram('training/termination', resons, step)
     [self.writer.add_scalar(tag, value, step) for tag,item in summary.items() for step,value in item.items()]
   
   def prepare_ci(self, infos: dict, category=None, confidence:float=.95, write_raw=False) -> Dict: 

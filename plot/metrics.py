@@ -94,7 +94,7 @@ def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): 
 
   title = lambda exp: ' '.join([exp[key] for key in forms if key in exp and key in groupby])
   # hue = lambda alg: [hue for key,hue in {'Object': 150, 'Action': 200, 'Radius': 230, 'A2C':40, 'Full': 350, 'RAD': 70}.items() if key in alg][0]
-  hue = lambda alg: [hue for key,hue in {'PPO': 150, 'SAC': 200, 'DQN': 230, 'TD3':40, 'TODO': 350, 'TODO': 70}.items() if key in alg][0]
+  hue = lambda alg: [hue for key,hue in {'PPO': 150, 'SAC': 200, 'A2C': 230, 'TD3':40, 'DQN': 350, 'TODO': 70}.items() if key in alg][0]
 
   # Create product of all occuances of specified groups, zip with group titles & add size and a counter of visited group items
   def merge(experiments, key):

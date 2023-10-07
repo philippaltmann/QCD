@@ -39,7 +39,7 @@ class Reward:
         # print(qml.draw(circuit)())
         if task == 'SP': reward = self._state_preparation(circuit, param)     # StatePreparation
         elif task == 'UC': reward = self._unitary_composition(circuit, param) # Unitary Composition
-        if punish: reward -= (qml.specs(circuit)()["resources"].depth - self.depth/3) / (self.depth / 2 * 3)  # 1/3 deph overhead to solution
+        if punish: reward -= (max(0,qml.specs(circuit)()["resources"].depth - self.depth/3)) / (self.depth / 2 * 3)  # 1/3 deph overhead to solution
 
         # and more to come...
         return reward

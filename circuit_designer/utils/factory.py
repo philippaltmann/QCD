@@ -3,8 +3,8 @@ from circuit_designer import *
 from circuit_designer.wrappers.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
-def _make(record_video=False, **spec): #discrete=False, 
-  def _init() -> gym.Env: return Monitor(gym.make(**spec), record_video=record_video) #discrete=discrete,
+def _make(record_video=False, **spec):
+  def _init() -> gym.Env: return Monitor(gym.make(**spec), record_video=record_video) 
   return _init
 
 def named(env):

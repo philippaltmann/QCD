@@ -11,12 +11,13 @@ This repository contains a general **`gymnasium`** environment "`CircuitDesigner
 + unitary composition
   (find a gate sequence that constructs an arbitrary quantum operator)
 
-for a finite set of quantum gates (see [Actions](#actions)). A simple routine is set up for training the environment with a reinforcement learning algorithm implemented in **`stable_baselines3`**.
+for a finite set of quantum gates (see [Actions](#actions)). 
+A simple routine is set up for training the environment with reinforcement learning algorithms implemented in **`stable_baselines3`**.
 
 ### Special features of this package
 
 + the action space consists of discrete and continuous actions
-  (= discrete set of parametrized gates applied to discrete qubits)
+  (= discrete set of continuously parametrized gates applied to discrete qubits)
   
 + the agent can decide to terminate on its own as an additional action
 
@@ -26,13 +27,18 @@ for a finite set of quantum gates (see [Actions](#actions)). A simple routine is
 
 ## **Setup**
 
+To install all required packages run: 
+```sh
+$ pip install -r requirements
+```
+
 The environment can be set up as:
 
 ```python
-import rl4qc
+import circuit_designer
 import gymnasium as gym
 
-env = gym.make("CircuitDesigner-v0", max_qubits, max_depth, challenge)
+env = gym.make("CircuitDesigner-v0", max_qubits=eta, max_depth=delta, challenge='UC-hadamard')
 ```
 
 ### *Parameters*
@@ -50,22 +56,32 @@ The relevant parameters for setting up the environment are:
 
 The action space of the environment consists of the **universal gate set**[^1]
 
-+ `Z-Rotation`: $$R_Z(\theta) = \exp(-\text{i} \frac{\theta}{2} Z)$$
-+ `Phased X`: $$P_X(\theta, \phi) = \exp(\text{i}\theta Z) \cdot \exp(\text{i}\phi X) \cdot \exp(-\text{i}\theta Z)$$
-+ `CNOT`: $$\text{CNOT}\ket{a} \ket{b} = \ket{a} \ket{a \oplus b}$$
+- `PhaseShift`: $$P(\Phi) =  \exp\left(i\frac{\Phi}{2}\right) \cdot \exp\left(-i\frac{\Phi}{2} Z\right)$$
+- `ControlledPhaseShift`: $$CP(\Phi) = I \otimes \ket{0} \bra{0} + P(\Phi) \otimes \ket{1} \bra{1}$$
+- `X-Rotation`: $$RX(\Phi) = \exp\left(-i \frac{\Phi}{2} X\right)$$
+- `CNOT`: $$CX_{a,b} = \ket{0}\bra{0}\otimes I + \ket{1}\bra{1}\otimes X$$
 
-and the additional action `Terminate` which actively terminates an episode.
+and the additional actions `Meassure` and `Terminate` which actively terminates an episode.
 
-Therefore the action space is a flattened Tuple (instance of `gym.spaces`) with `Box` elements:
+Therefore the action space is a `Box` with the following elements:
 
-| Index | Type    | Range             | Description                                |
-| ----- | ------- | ----------------- | :----------------------------------------- |
-| 0     | `int`   | [0, 3]            | specifying action (gate or terminate)      |
-| 1     | `int`   | [0, `max_qubits`) | specifying qubit/wire to apply the gate to |
-| 2     | `float` | [0, 2 $\pi$]       | continuous parameter $\phi$                |
-| 3     | `float` | [0, 2 $\pi$]       | continuous parameter $\theta$              |
+| Index | Name      | Type   | Range             | Description                                |
+| ----- | --------- |------- | ----------------- | :----------------------------------------- |
+| 0     | Operation |`int`   | [0, 3]            | specifying operation (see next table)      |
+| 1     | Qubit     |`int`   | [0, `max_qubits`) | specifying qubit to apply the operation    |
+| 2     | Control   |`int`   | [0, `max_qubits`) | specifying a control qubit                 |
+| 3     | Parameter |`float` | [- $\pi$, $\pi$]  | continuous parameter $\phi$                |
 
-[^1]: ["Quantum circuit optimization with deep reinforcement learning"](http://arxiv.org/pdf/2103.07585v1)
+Operations 
+| Index | Qubit / Control  | Type                 | Arguments                 | Comments                      |
+| ----- | :--------------: | -------------------- | ------------------------- | :---------------------------- |
+| 0     |  -               | Meassurement         | Qubit                     | Control and Parameter omitted |
+| 1     | qubit == control | PhaseShift           | Qubit, Parameter          | Control omitted               |
+| 1     | qubit != control | ControlledPhaseShift | Qubit, Control, Parameter | -                             |
+| 2     | qubit == control | X-Rotation           | Qubit, Parameter          | Control omitted               |
+| 2     | qubit != control | CNOT                 | Qubit, Control            | Parameter omitted             |
+| 3     |  -               | Terminate            | -                         | All agruments omitted         |
+
 
 ### *Observations*
 
@@ -84,7 +100,7 @@ For the reward function, the distance metric called ***fidelity*** $$\mathcal{F}
 
 + `'SP-random'` (a random state over *max_qubits* )
 + `'SP-bell'` (the 2-qubit Bell state)
-+ `'SP-ghz**N**'` (the ***N*** qubit GHZ state)
++ `'SP-ghz<N>'` (the `<N>` qubit GHZ state)
 
 ##### Unitary Composition `'UC'`
 
@@ -112,35 +128,6 @@ These circuit optimization objectives can be switched on by the parameter `punis
 
 Currently, the only further objective implemented in this environment is the **circuit depth**, as this is one of the most important features to restrict for NISQ (noisy, intermediate-scale, quantum) devices. This metric already includes gate count and parameter count to some extent. However, further objectives can easily be added within the `Reward` class of this environment (see [Outlook](#outlook-and-todos)).
 
-## **Example**
-
-```python
-import rl4qc
-import gymnasium as gym
-
-# specify environmental parameters
-max_qubits = 2
-max_depth = 10
-challenge = 'SP-bell'
-
-# initalize environment
-env = gym.make("CircuitDesigner-v0", max_qubits, max_depth, challenge)
-
-# run basic example with random actions
-observation, info = env.reset()
-
-for _ in range(100):
-    action = env.action_space.sample()  # agent policy that uses the observation and info
-    observation, reward, terminated, truncated, info = env.step(action)
-
-    if terminated or truncated:
-        observation, info = env.reset()
-        
-```
-
-This shows a plot of the built circuit after each episode:
-
-![example_circuit](/assets/example_circuit.png)
 
 ## **Outlook and ToDos**
 
@@ -155,3 +142,24 @@ This shows a plot of the built circuit after each episode:
 -[ ] Implement weighting factors for the rewards and punishments and tune them for optimal trainability
 
 -[ ] Design a sophisticated learning routine and evaluate the different RL algorithms (e.g. PPO, A2C, etc.)
+
+## Tests
+
+To test the current challenges, run 
+```sh
+$ python -m circuit_designer.test
+```
+
+## Baselines
+
+To train the provided baseline algorithms run 
+```sh
+$ ./train
+```
+
+## Plots 
+
+To generate plots from the `results` folder, run 
+```sh
+$ python -m plot results
+```

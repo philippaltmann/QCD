@@ -1,8 +1,8 @@
 import os; from os import path; import itertools; from tqdm import tqdm
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator as EA
 import pandas as pd; import numpy as np; import scipy.stats as st; import re
-# from ai_safety_gym import factory, make, env_spec
-from circuit_designer.utils import factory
+import gymnasium as gym; from circuit_designer.utils import named
+from circuit_designer.wrappers import Monitor
 from baselines import *
 
 # TODO: acc pretrain scores 
@@ -15,7 +15,7 @@ def extract_model(exp, run):
   model = algorithm.load(load=run.path, seed=seed, envs=[exp['env']], path=None, device='cpu')
   return model
 
-def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv=False, baseline=None):
+def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv=False, baseline=None, random_baseline=True):
   """Loads and structures all tb log files Given:
   :param base_path (str):
   :param env (optional): the environment to load 
@@ -83,9 +83,10 @@ def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv
   return experiments
 
 
-def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): #merge=None
+# def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): #merge=None
+def group_experiments(experiments, groupby=['env'], mergeon=None): #merge=None
   # Graphical helpers for titles, labels
-  forms = ['algorithm', 'explorer', 'env']
+  forms = ['algorithm', 'env']
   def label(exp):
     i = {key: re.sub(r'[0-9]+ ', '', exp[key]) for key in forms if key in exp and key not in groupby}
     check = lambda keys,base,op=all: op([k in base for k in keys])
@@ -93,8 +94,6 @@ def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): 
     # return f"{i['algorithm'] if check(['algorithm', 'method'],i) and check(['Full','RAD'],i['method'], any) else ''} {'FO' if check(['Full'],i['method']) else i['method']}"
 
   title = lambda exp: ' '.join([exp[key] for key in forms if key in exp and key in groupby])
-  # hue = lambda alg: [hue for key,hue in {'Object': 150, 'Action': 200, 'Radius': 230, 'A2C':40, 'Full': 350, 'RAD': 70}.items() if key in alg][0]
-  hue = lambda alg: [hue for key,hue in {'PPO': 150, 'SAC': 200, 'A2C': 230, 'TD3':40, 'DQN': 350, 'TODO': 70}.items() if key in alg][0]
 
   # Create product of all occuances of specified groups, zip with group titles & add size and a counter of visited group items
   def merge(experiments, key):
@@ -108,7 +107,7 @@ def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): 
   ingroup = lambda experiment, group: all([experiment[k] == v for k,v in zip(groupby, group)])
   options = list(zip(options, [[ title(exp) for exp in experiments if ingroup(exp,group)] for group in options ]))
   options = [(group, [0, len(titles)], titles[0]) for group, titles in options]
-  getgraph = lambda exp, index: { 'label': label(exp), 'data': exp['data'], 'models': exp['models'], 'hue': hue(exp['algorithm'])} 
+  getgraph = lambda exp, index: { 'label': label(exp), 'data': exp['data'], 'models': exp['models']} 
   return [{'title': title, 'graphs': [ getgraph(exp, index) for exp in experiments if ingroup(exp, group) ] } for group, index, title in options ]
 
 
@@ -129,10 +128,7 @@ def calculate_metrics(plots, metrics):
 def process_ci(data, models):
   # Helper to claculate confidence interval
   ci = lambda d, confidence=0.95: st.t.ppf((1+confidence)/2, len(d)-1) * st.sem(d)
-  # stop = models[0].env.get_attr('reward_threshold')[0]
-  # reward_range = models[0].env.get_attr('env')[0].env.reward_range
   reward_range = (0,1)
-  # upper = models[0].env.get_attr('env')[0].spec.reward_threshold if not models[0].continue_training else None # Retrieve max from threhsold 
   # Prepare Data (fill until highest index)
   steps = [d.index[-1] for d in data]; maxsteps = np.max(steps)
   for d in data: d.at[maxsteps, 'Data'] = float(d.tail(1)['Data'])
@@ -140,36 +136,30 @@ def process_ci(data, models):
   
   # Mean 1..n | CI 1..n..1
   mean, h = data.mean(axis=1), data.apply(ci, axis=1)
-  ci = pd.concat([mean+h, (mean-h).iloc[::-1]]).clip(*reward_range)
+  ci = pd.concat([mean+h, (mean-h).iloc[::-1]])
   return (mean, ci, reward_range)
-  # return (mean, ci, stop)
 
 
 def process_steps(data, models): return ([d.index[-1] for d in data], 10e5)
 
-
 iterate = lambda model, envs, func: [ func(env, k,i) for env in envs for k,i in model.heatmap_iterations.items() ]
 heatmap = lambda model, envs: iterate(model, envs, lambda env, k,i: env.envs[0].iterate(i[0]))
-# metadata = lambda model, envs: iterate(model, envs, lambda env, k,i: (f'{k.capitalize()} {env_spec(env)._kwargs["level_choice"]}', i[1]))
-# make_env = lambda model, spec: [e for e in model.envs['test'].values() if spec in env_spec(e)._env_name][0]
-
-def process_heatmap(specs, models):
-  raise(NotImplementedError)
-  # TODO: wrapper??
-  # setting = list(zip(models, [[make_env(model, s) for s in spec] for model,spec in zip(models,specs)]))
-  # return { k:d for (k,a),d in zip(metadata(*setting[0]), np.moveaxis(np.array([heatmap(*s) for s in setting]), 0, -1))} 
 
 
-def process_eval(specs, models, deterministic=True):
-  raise(NotImplementedError)
-  # from stable_baselines3.common.evaluation import evaluate_policy
-  # # assert False, "Make env not using CROP wrappper"
-  # data = [(model, make_env(model, spec)) for model,spec in zip(models,specs)]
-  # termination_reasons = data[0][1].get_attr('termination_reasons')[0]
-  # def callback(g,l): 
-  #   if 'episode' in g['info']: termination_reasons[g['info']['extra_observations']['termination_reason']] += 1
-  # if deterministic: eval = [evaluate_policy(*args, n_eval_episodes=1, callback=callback)[0] for args in data ]
-  # else: eval = [r for args in data for r in evaluate_policy(*args, n_eval_episodes=100, deterministic=False, return_episode_rewards=True, callback=callback)[0]]
-
-  # return (eval, data[0][1].get_attr('reward_threshold')[0], termination_reasons)
-  
+def fetch_random(base, experiment, EPS=100):
+  if not os.path.exists(f"{base}/{experiment['title']}/Random"):
+    print(f"Running Random Baseline for {experiment['title']}")
+    M = {'Return': 'r', 'Depth': 'd', 'Qubits': 'q'}
+    env = Monitor(gym.make(**named(experiment['title']), seed=42, discrete=False))
+    data = {m: [] for m in experiment['graphs'][0]['data'].keys()}
+    steps = [i for g in experiment['graphs'] for i in g['data'][list(data.keys())[0]][0].index]; 
+    index = [np.min(steps), np.max(steps)]
+    for s in range(8):
+      env.action_space.seed(s+1); [d.append([]) for d in data.values()]
+      while len(data[list(data.keys())[0]][-1]) < EPS:
+        env.reset(); terminated = False; truncated = False
+        while not (terminated or truncated): _, _, terminated, truncated, info = env.step(env.action_space.sample())
+        [val[-1].append(info['episode'][M[key]]) for key,val in data.items()]
+      for val in data.values(): val[-1] = pd.DataFrame([sum(val[-1])/EPS]*2, index=index, columns=['Data'])
+    experiment['graphs'].append({'label': 'Random', 'models': [None], 'data': data})
+  else: assert False, "TODO: load random baseline"

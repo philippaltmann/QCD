@@ -9,7 +9,6 @@ from .rewards import Reward
 
 # Resolution of the parameter disrectization
 GATES = 3
-RESOLUTION = 4#32
 
 class CircuitDesigner(gym.Env):
     """ Quantum Circuit Environment:
@@ -45,7 +44,7 @@ class CircuitDesigner(gym.Env):
 
     metadata = {"render_modes": ["image","text"], "render_fps": 30}
 
-    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True, seed=None, render_mode=None, discrete=True):
+    def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True, seed=None, render_mode=None):
         super().__init__()
         if seed is not None: self._np_random, seed = gym.utils.seeding.np_random(seed)
         self.render_mode = render_mode; self.name = f"{challenge}|{max_qubits}-{max_depth}"
@@ -72,9 +71,8 @@ class CircuitDesigner(gym.Env):
         self.device = qml.device('lightning.qubit', wires=self.qubits)  # default.qubit
         
         # Action space: Gate, Wire, Control, and Theta
-        self.discrete = discrete; m = 1e-5 # prevent gate overflow at bounds due to floor operator 
-        if self.discrete: self.action_space = gym.spaces.MultiDiscrete([GATES, self.qubits, self.qubits, RESOLUTION+1])
-        else: self.action_space = gym.spaces.Box(np.array([0,0,0,-np.pi]), np.array([GATES-m,self.qubits-m,self.qubits-m,np.pi]))
+        m = 1e-5 # prevent gate overflow at bounds due to floor operator 
+        self.action_space = gym.spaces.Box(np.array([0,0,0,-np.pi]), np.array([GATES-m,self.qubits-m,self.qubits-m,np.pi]))
 
         # define observation space
         self.observation_space = gym.spaces.Box(low=-1.0, high=+1.0, shape=(2*2**max_qubits,)) #, type=np.float64
@@ -86,8 +84,7 @@ class CircuitDesigner(gym.Env):
     def _action_to_operation(self, action):
         """ Action Converter translating values from action_space into quantum operations """
         gate, wire, cntrl, theta = action
-        if self.discrete: theta = (2 * (theta / RESOLUTION) - 1) * np.pi
-        else: gate, wire, cntrl = np.floor([gate, wire, cntrl]).astype(int)
+        gate, wire, cntrl = np.floor([gate, wire, cntrl]).astype(int)
         # print(f"Applying {['NOOP', 'CRZ', 'CRX'][gate]}({theta/np.pi}π) to {gate}•{cntrl}")
         assert wire in range(self.qubits) and cntrl in range(self.qubits), f"{action}"
 

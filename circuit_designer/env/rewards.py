@@ -2,7 +2,6 @@ import numpy as np
 import re
 import pennylane as qml
 from scipy.stats import unitary_group
-from math import erf
 
 
 class Reward:

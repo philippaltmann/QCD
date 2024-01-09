@@ -30,10 +30,10 @@ class CircuitDesigner(gym.Env):
 
   metadata = {"render_modes": ["image","text"], "render_fps": 30}
 
-  def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True, seed=None, render_mode=None):
+  def __init__(self, max_qubits: int, max_depth: int, challenge: str, punish=True, seed=None, render_mode=None, verbose=False):
     super().__init__()
     if seed is not None: self._np_random, seed = gym.utils.seeding.np_random(seed)
-    self.render_mode = render_mode; self.name = f"{challenge}|{max_qubits}-{max_depth}"
+    self.render_mode = render_mode; self.verbose = verbose; self.name = f"{challenge}|{max_qubits}-{max_depth}"
 
     # define parameters
     self.qubits = max_qubits  # the (maximal) number of available qubits
@@ -66,8 +66,6 @@ class CircuitDesigner(gym.Env):
     # initialize reward class
     self.reward = Reward(self.qubits, self.depth)
     self.punish = punish
-
-  def action_to_operation(self, action): return self._action_to_operation(action)
 
   def _action_to_operation(self, action):
     """ Action Converter translating values from action_space into quantum operations """
@@ -117,10 +115,15 @@ class CircuitDesigner(gym.Env):
     if not terminated: # conduct action & update action trajectory
       operation = self._action_to_operation(action)
       self._operations.append(operation)
-
+    
     state, node = self._get_state(); info = qml.specs(node)()
     terminated = action[0] == 3 or len(self._disabled) >= self.qubits
     truncated = info["resources"].depth >= self.depth or len(self._operations) >= self.max_steps
+
+    if self.verbose: 
+      if isinstance(operation,int): print(f"Measure {operation}")
+      else: print(str(operation)+"\n"+self.render() if self.render_mode is not None else '')
+      print("Terminate\n" if terminated else "\n")
 
     if terminated: info['termination_reason'] = 'DONE'
     if truncated: info['termination_reason'] = 'DEPTH'

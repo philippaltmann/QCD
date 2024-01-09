@@ -1,34 +1,33 @@
-from circuit_designer.utils import factory; import numpy as np
+import gymnasium as gym; import numpy as np
 
 def toffoli():
-  env = factory(['UC-toffoli-q3-d63'], seed=1, n_train=1) #, **envkwargs
-  env['train'].reset()
+  env = gym.make("CircuitDesigner-v0", max_qubits=3, max_depth=63, challenge='UC-toffoli')
+  env.reset()
 
   # V
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
-  env['train'].step([[1,2,1,np.pi/2]])  
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([1,2,1,np.pi/2])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
 
   # Cnot
-  env['train'].step([[2,1,0,np.pi/2]])  
+  env.step([2,1,0,np.pi/2])  
 
   # V-
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
-  env['train'].step([[1,2,1,-np.pi/2]])  
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([1,2,1,-np.pi/2])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
 
   # Cnot
-  env['train'].step([[2,1,0,np.pi/2]])  
+  env.step([2,1,0,np.pi/2])  
 
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
-  env['train'].step([[1,2,0,np.pi/2]])  
-  env['train'].step([[1,2,2,np.pi/2]]); env['train'].step([[2,2,2,np.pi/2]]); env['train'].step([[1,2,2,np.pi/2]])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([1,2,0,np.pi/2])  
+  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
   # CZ pi/2
 
   # Meassure
-  env['train'].step([[0,0,0,0]])
-  env['train'].step([[0,1,0,0]])
-  reward = env['train'].step([[0,2,0,0]])[1]
-  assert reward == 1, f"Reward not one: {reward} "
+  env.step([0,0,0,0])
+  env.step([0,1,0,0])
+  reward = env.step([0,2,0,0])[1]
+  np.testing.assert_almost_equal(reward, 1)
   print("Succeeded Toffoli test")
-

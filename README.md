@@ -1,175 +1,156 @@
-# RL4QC
+# Quantum Circuit Designer
 
-**R**einforcement **L**earning for **Q**uantum **C**ircuit Design.
+[![arXiv](https://img.shields.io/badge/arXiv-2312.11337-b31b1b.svg)](https://arxiv.org/abs/2312.11337)
 
 ## **Description**
 
-This repository contains a general **`gymnasium`** environment "`CircuitDesigner-v0`" that builds quantum circuits gate-by-gate using **`pennylane`** for specific challenges in quantum computing. The implemented challenges include
+This repository contains the Quantum Circuit Designer, a generic [gymnasium](https://github.com/Farama-Foundation/Gymnasium) environment to build quantum circuits gate-by-gate using [pennylane](https://github.com/PennyLaneAI/pennylane), revealing current challenges regarding:
 
-+ state preparation
-  (find a gate sequence that turns some initial state into the target quantum state)
-+ unitary composition
-  (find a gate sequence that constructs an arbitrary quantum operator)
+- [State Preparation (SP)](#state-preparation): Find a gate sequence that turns some initial state into the target quantum state.
+- [Unitary Composition (UC)](#unitary-composition): Find a gate sequence that constructs an arbitrary quantum operator.
 
-for a finite set of quantum gates (see [Actions](#actions)).
-A simple routine is set up for training the environment with reinforcement learning algorithms implemented in **`stable_baselines3`**.
 
-### Special features of this package
+## Observations
 
-+ the action space consists of discrete and continuous actions
-  (= discrete set of continuously parametrized gates applied to discrete qubits)
-  
-+ the agent can decide to terminate on its own as an additional action
+The observation is defined by the full complex vector representation of the state of the current circuit: $s = \ket{\boldsymbol{\Psi}}\in\mathbb{C}^{2^\eta}$. 
+While this information is only available in quantum circuit simulators efficiently (on real hardware, $\mathcal{O}(2^\eta)$ measurements would be needed), it depicts a starting point for RL from which future work should extract a sufficient, efficiently obtainable, subset of information.
+This $2^\eta$-dimensional state representation is sufficient for the definition of an MDP-compliant environment, as operations on this state are required to be reversible. 
 
-+ the reward is sparse and will only be given after termination/truncation based on the full circuit output
+## Actions
 
-+ the state observations correspond to the full complex state vector of the quantum system at the current time step
+We use a $4$-dimensional `Box` action space $\langle o, q, c, \Phi \rangle = a \in \mathcal{A} = \{\Gamma \times \Omega \times \Theta\}$ with the following elements:
+
+| Name      | Parameter             | Type  | Description                             |
+| --------- | --------------------- |-------| :-------------------------------------- |
+| Operation | $o \in \Gamma$        |`int`  | specifying operation (see next table)   |
+| Qubit     | $q \in[0, \eta)$      |`int`  | specifying qubit to apply the operation |
+| Control   | $c \in[0, \eta)$      |`int`  | specifying a control qubit              |
+| Parameter | $\Phi \in[- \pi,\pi]$ |`float`| continuous parameter                    |
+
+The operations $\Gamma$ are defined as: 
+
+| o | Operation    | Condition  | Type                 | Arguments  | Comments                      |
+| - | ------------ | ---------- | -------------------- | ---------- | :---------------------------- |
+| 0 | $\mathbb{M}$ |            | Meassurement         | $q$        | Control and Parameter omitted |
+| 1 | $\mathbb{Z}$ | $q = c$    | PhaseShift           | $q,\Phi$   | Control omitted               |
+| 1 | $\mathbb{Z}$ | $q \neq c$ | ControlledPhaseShift | $q,c,\Phi$ | -                             |
+| 2 | $\mathbb{X}$ | $q = c$    | X-Rotation           | $q,\Phi$   | Control omitted               |
+| 2 | $\mathbb{X}$ | $q \neq c$ | CNOT                 | $q,c$      | Parameter omitted             |
+| 3 | $\mathbb{T}$ |            | Terminate            |            | All agruments omitted         |
+
+With operations according to the following unversal gate set:
+
+- CNOT: $$CX_{q,c} = \ket{0}\bra{0}\otimes I + \ket{1}\bra{1}\otimes X$$
+- X-Rotation: $$RX(\Phi) = \exp\left(-i \frac{\Phi}{2} X\right)$$
+- PhaseShift: $$P(\Phi) =  \exp\left(i\frac{\Phi}{2}\right) \cdot \exp\left(-i\frac{\Phi}{2} Z\right)$$
+- ControlledPhaseShift: $$CP(\Phi) = I \otimes \ket{0} \bra{0} + P(\Phi) \otimes \ket{1} \bra{1}$$
+
+## Reward
+
+The reward is kept $0$ until the end of an episode is reached (either by truncation or termination).
+To incentivize the use of few operations, a step-cost $\mathcal{C}_t$ is applied when exceeding two-thirds of the available operations $\sigma$:
+$$\mathcal{C}_t=\max\left(0,\frac{3}{2\sigma}\left(t-\frac{\sigma}{3}\right)\right)$$
+
+Suitable task reward functions $\mathcal{R}^{*}\in[0,1]$ are defined, s.t.: $\mathcal{R}=\mathcal{R}^{*}(s_t,a_t)-C_t$, according to the following challenges:
+
+## Challenges
+
+### **State Preparation**
+
+The objective of this challenge is to construct a quantum circuit that generates a desired quantum state.
+The reward is based on the *fidelity* $\mathcal{F} = |\braket{\psi_{\text{env}}|\psi_{\text{target}}}|^2 \in [0,1]$ between the target an the final state:
+$$\mathcal{R}^{SP}(s_t,a_t) = \begin{dcases} F(s_t, \Psi), &  \text{if $t$ is terminal.}  \\0, & \text{otherwise.} \end{dcases}$$
+Currently, the following states are defined:
+- `'SP-random'` (a random state over *max_qubits* )
+- `'SP-bell'` (the 2-qubit Bell state)
+- `'SP-ghz<N>'` (the `<N>` qubit GHZ state)
+
+### **Unitary Composition**
+
+The objective of this challenge is to construct a quantum circuit that implements a desired unitary operation.
+The reward is based on the ***Frobenius norm*** $D = |U - V(\Sigma_t)|_2$ between the taget unitary $U$ and the final unitary $V$ based on the sequence of operations $\Sigma_t = \langle a_0, \dots, a_t \rangle$: 
+
+$$ R^{UC}(s_t,a_t) = \begin{dcases} 1 - \arctan (D), & \text{if $t$ is terminal.} \\0, & \text{otherwise.} \end{dcases}$$
+
+<!-- For the reward function, an 1-arctan mapping of the ***Frobenius norm*** $|U_{\text{env}} - U_{\text{target}}|_2$ to the interval $[0,1]$ is chosen.  -->
+The following unitaries are currently available for this challenge:
+
+- `'UC-random'` (a random unitary operation on *max_qubits* )
+- `'UC-hadamard'` (the single qubit Hadamard gate)
+- `'UC-toffoli'` (the 3-qubit Toffoli gate)
+
+See [Outlook](#outlook-and-todos) for more challenges to come.
+
+### *Further Objectives*
+
+The goal of this implementation is to not only construct any circuit that fulfills a specific challenge but to also make this circuit optimal, that is to give the environment further objectives, such as optimizing:
+
+- Circuit Depth
+- Qubit Count
+- Gate Count (or: 2-qubit Gate Count)
+- Parameter Count
+- Qubit-Connectivity
+
+These circuit optimization objectives can be switched on by the parameter `punish` when initializing a new environment.
+
+Currently, the only further objective implemented in this environment is the **circuit depth**, as this is one of the most important features to restrict for NISQ (noisy, intermediate-scale, quantum) devices. This metric already includes gate count and parameter count to some extent. However, further objectives can easily be added within the `Reward` class of this environment (see [Outlook](#outlook)).
+
 
 ## **Setup**
 
-To install all required packages run:
+Install the quantum circuit designer environment
 
 ```sh
-pip install -r requirements
+pip install -e git+https://github.com/philippaltmann/qcd
 ```
 
 The environment can be set up as:
 
 ```python
-import circuit_designer
 import gymnasium as gym
 
-env = gym.make("CircuitDesigner-v0", max_qubits=eta, max_depth=delta, challenge='UC-hadamard')
-```
+env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=10, challenge='SP-bell', render_mode='text', verbose=True)
+observation, info = env.reset(seed=42); env.action_space.seed(42)
 
-### *Parameters*
+for _ in range(9):
+  action = env.action_space.sample()  # this is where you would insert your policy
+  observation, reward, terminated, truncated, info = env.step(action)
+  if terminated or truncated: observation, info = env.reset()
+
+env.close()
+```
 
 The relevant parameters for setting up the environment are:
 
-| Parameter  | Type   | Explanation                                                  |
-| :--------- | ------ | ------------------------------------------------------------ |
-| max_qubits | `int`  | maximal number of qubits available                            |
-| max_depth  | `int`  | maximal circuit depth allowed (= truncation criterion)       |
-| challenge  | `str`  | RL challenge for which the circuit is to be built (see [Challenges](#challenges)) |
-| punish     | `bool` | specifier for turning on multi-objectives (see [Further Objectives](#further-objectives)) |
+| Parameter          | Type   | Explanation                                                  |
+| :----------------- | ------ | ------------------------------------------------------------ |
+| max_qubits $\eta$  | `int`  | maximal number of qubits available                           |
+| max_depth $\delta$ | `int`  | maximal circuit depth allowed (= truncation criterion)       |
+| challenge          | `str`  | RL challenge for which the circuit is to be built (see [Challenges](#challenges)) |
+| punish             | `bool` | specifier for turning on multi-objectives (see [Further Objectives](#further-objectives)) |
 
-### *Actions*
 
-The action space of the environment consists of the **universal gate set**[^1]
+## Running benchmarks 
 
-+ `PhaseShift`: $$P(\Phi) =  \exp\left(i\frac{\Phi}{2}\right) \cdot \exp\left(-i\frac{\Phi}{2} Z\right)$$
-+ `ControlledPhaseShift`: $$CP(\Phi) = I \otimes \ket{0} \bra{0} + P(\Phi) \otimes \ket{1} \bra{1}$$
-+ `X-Rotation`: $$RX(\Phi) = \exp\left(-i \frac{\Phi}{2} X\right)$$
-+ `CNOT`: $$CX_{a,b} = \ket{0}\bra{0}\otimes I + \ket{1}\bra{1}\otimes X$$
-
-and the additional actions `Meassure` and `Terminate` which actively terminates an episode.
-
-Therefore the action space is a `Box` with the following elements:
-
-| Index | Name      | Type   | Range             | Description                                |
-| ----- | --------- |------- | ----------------- | :----------------------------------------- |
-| 0     | Operation |`int`   | [0, 3]            | specifying operation (see next table)      |
-| 1     | Qubit     |`int`   | [0, `max_qubits`) | specifying qubit to apply the operation    |
-| 2     | Control   |`int`   | [0, `max_qubits`) | specifying a control qubit                 |
-| 3     | Parameter |`float` | [- $\pi$, $\pi$]  | continuous parameter $\phi$                |
-
-Operations
-| Index | Qubit / Control  | Type                 | Arguments                 | Comments                      |
-| ----- | :--------------: | -------------------- | ------------------------- | :---------------------------- |
-| 0     |  -               | Meassurement         | Qubit                     | Control and Parameter omitted |
-| 1     | qubit == control | PhaseShift           | Qubit, Parameter          | Control omitted               |
-| 1     | qubit != control | ControlledPhaseShift | Qubit, Control, Parameter | -                             |
-| 2     | qubit == control | X-Rotation           | Qubit, Parameter          | Control omitted               |
-| 2     | qubit != control | CNOT                 | Qubit, Control            | Parameter omitted             |
-| 3     |  -               | Terminate            | -                         | All agruments omitted         |
-
-### *Observations*
-
-The state observation returned by the environment is the complex quantum state $\ket{\psi} \in \mathbb{C} ^{n}$ with $n = 2^{\mathrm{qubits}}$ in the computational basis of the quantum system. The initial state of the environment is chosen as $\ket{\psi_{\text{init}}} = \ket{0}^{\otimes n}$.
-
-### *Challenges*
-
-Currently, there are two RL challenges implemented within the environment:
-
-#### State Preparation `'SP'`
-
-The objective of this challenge is to construct a quantum circuit that generates a desired quantum state (e.g. the GHZ state).
-For the reward function, the distance metric called ***fidelity*** $$\mathcal{F} = |\braket{\psi_{\text{env}}|\psi_{\text{target}}}|^2 \in [0,1]$$ is used.
-
-##### currently available states for this challenge
-
-+ `'SP-random'` (a random state over *max_qubits* )
-+ `'SP-bell'` (the 2-qubit Bell state)
-+ `'SP-ghz<N>'` (the `<N>` qubit GHZ state)
-
-##### Unitary Composition `'UC'`
-
-The objective of this challenge is to construct a quantum circuit with a given finite set of gates that implements a desired unitary transformation/operation. For the reward function, an 1-arctan mapping of the ***Frobenius norm*** $$|U_{\text{env}} - U_{\text{target}}|_2$$ to the interval $[0,1]$ is chosen.
-
-##### currently available unitaries for this challenge
-
-+ `'UC-random'` (a random unitary operation on *max_qubits* )
-+ `'UC-hadamard'` (the single qubit Hadamard gate)
-+ `'UC-toffoli'` (the 3-qubit Toffoli gate)
-
-See [Outlook](#outlook-and-todos) for more challenges to come...
-
-### *Further Objectives*
-
-The goal of this implementation is to not only construct any circuit that fulfills a specific challenge but to also make this circuit optimal, that is to give the environment further objectives, such as minimizing:
-
-+ Circuit Depth
-+ Qubit Count
-+ Gate Count (or: 2-qubit Gate Count)
-+ Parameter Count
-+ Qubit-Connectivity
-
-These circuit optimization objectives can be switched on by the parameter `punish` when initializing a new environment.
-
-Currently, the only further objective implemented in this environment is the **circuit depth**, as this is one of the most important features to restrict for NISQ (noisy, intermediate-scale, quantum) devices. This metric already includes gate count and parameter count to some extent. However, further objectives can easily be added within the `Reward` class of this environment (see [Outlook](#outlook-and-todos)).
-
-## **Outlook and ToDos**
-
--[ ] Implement more challenges for the environment (e.g. ansatz search, optimal control, maximal entanglement, etc.)
-
--[ ] Implement more states for "SP" and more unitaries for "UC" challenge
-
--[ ] Investigate reward functions and possibly improve them for more efficient learning
-
--[ ] Include further objectives (as listed in [Further Objectives](#further-objectives)) and evaluate their effectiveness
-
--[ ] Implement weighting factors for the rewards and punishments and tune them for optimal trainability
-
--[ ] Design a sophisticated learning routine and evaluate the different RL algorithms (e.g. PPO, A2C, etc.)
-
-## Tests
-
-To test the current challenges, run
-
+Running benchmark experiments requires a full installation including baseline algorithms extending [stable_baselines3](https://github.com/DLR-RM/stable-baselines3) and a plotting framework extending [plotly](https://github.com/plotly/plotly.py):
+This can be achieved by:
 ```sh
-python -m circuit_designer.test
+git clone https://github.com/philippaltmann/QCD.git
+pip install -e '.[all]'
 ```
 
-## Train
-
-To train a policy, run
+Specify the intended \<Challenge\> as: "`challenge`-q`max_qubits`-d`max_depth`":
 
 ```sh
-python -m train PPO -e UC-hadamard-q1-d9
-```
+# Run a specific algoritm and challenge (requires `pip install -e '.[train]'`)
+python -m train [A2C | PPO | SAC | TD3] -e <Challenge>
 
-## Baselines
-
-To train the provided baseline algorithms run
-
-```sh
-./train
-```
-
-## Plots
-
-To generate plots from the `results` folder, run
-
-```sh
+# Generate plots from the `results` folder (requires `pip install -e '.[plot]'`)
 python -m plot results
+
+# To train the provided baseline algorithms, use (pip install -e .[all])
+./run
+
+# Test the circuit designer (requires `pip install -e '.[test]'`)
+python -m circuit_designer.test
 ```

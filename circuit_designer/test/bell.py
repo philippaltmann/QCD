@@ -1,8 +1,6 @@
-# from circuit_designer.utils import factory
 import gymnasium as gym; import numpy as np
 
 def bell():
-  # env = factory(['SP-bell-q2-d12'], seed=1, n_train=1) #, **envkwargs
   env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=12, challenge='SP-bell')
   env.reset()
 

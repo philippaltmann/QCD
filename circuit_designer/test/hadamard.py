@@ -1,6 +1,5 @@
 import gymnasium as gym; import numpy as np
 
-
 def hadamard():
   # Test 1-qubit H
   env = gym.make("CircuitDesigner-v0", max_qubits=1, max_depth=9, challenge='UC-hadamard')

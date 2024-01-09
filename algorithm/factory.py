@@ -1,5 +1,4 @@
 import gymnasium as gym; import re
-from circuit_designer import *
 from circuit_designer.wrappers.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 

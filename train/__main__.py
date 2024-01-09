@@ -1,6 +1,5 @@
 import argparse; import time
 from baselines import *
-from circuit_designer.utils import factory
 start = time.time()
 
 # General Arguments
@@ -26,7 +25,7 @@ load = args.pop('load', None)
 trainer = eval(args.pop('method'))
 # args['policy'] = 'MultiInputPolicy'
  
-model = trainer(**args, factory=factory)
+model = trainer(**args)
 model._naming = {**model._naming , 'd': 'depth-100', 'q': 'qbits-100', 'o': 'ops-100'}
 
 if load is not None:

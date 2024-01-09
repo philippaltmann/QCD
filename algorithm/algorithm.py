@@ -11,12 +11,13 @@ from tqdm import tqdm; import os
 import gymnasium as gym
 import platform; import stable_baselines3 as sb3; 
 from algorithm.evaluation import EvaluationCallback
+from algorithm.factory import factory
 
 
 class TrainableAlgorithm(BaseAlgorithm):
   """ Generic Algorithm Class extending BaseAlgorithm with features needed by the training pipeline """
   def __init__(self, envs:List[str]=None, normalize:bool=False, policy:Union[str,Type[ActorCriticPolicy]]="MlpPolicy", path:Optional[str]=None, 
-               seed=None, silent=False, stop_on_reward=False, explore=False, log_name=None, factory=None, envkwargs={}, **kwargs):
+               seed=None, silent=False, stop_on_reward=False, explore=False, log_name=None, envkwargs={}, **kwargs):
     """ :param env: The environment to learn from (if registered in Gym, can be str)
     :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...) defaults to MlpPolicy
     :param normalize: whether to use normalized observations, default: False

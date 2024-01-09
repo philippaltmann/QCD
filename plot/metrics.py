@@ -1,7 +1,7 @@
 import os; from os import path; import itertools; from tqdm import tqdm
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator as EA
 import pandas as pd; import numpy as np; import scipy.stats as st; import re
-import gymnasium as gym; from circuit_designer.utils import named
+import gymnasium as gym; from algorithm.factory import named
 from circuit_designer.wrappers import Monitor
 from baselines import *
 

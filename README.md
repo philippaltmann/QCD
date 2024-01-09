@@ -101,7 +101,7 @@ Currently, the only further objective implemented in this environment is the **c
 Install the quantum circuit designer environment
 
 ```sh
-pip install -e git+https://github.com/philippaltmann/qcd
+pip install git+https://github.com/philippaltmann/qcd
 ```
 
 The environment can be set up as:

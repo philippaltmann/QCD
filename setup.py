@@ -5,7 +5,7 @@ train = [ "stable_baselines3>=2.0.0", "tqdm>=4.65.0"]
 plot = ["plotly>=5.0", "tensorboard>=2.0"]
 
 setup(
-  name="qcd", version="1.0",
+  name="qcd-gym", version="0.1.0",
   description="Quantum Circuit Designer: A gymnasium-based set of environments for benchmarking reinforcement learning for quantum circuit design.",
   url="https://github.com/philippaltmann/qcd", author_email="philipp@hyphi.co", license="MIT",
   keywords="benchmark reinforcement-learning quantum-computing gymnasium circuit-design",

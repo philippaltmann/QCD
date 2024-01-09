@@ -1,6 +1,7 @@
 # Quantum Circuit Designer
 
 [![arXiv](https://img.shields.io/badge/arXiv-2312.11337-b31b1b.svg)](https://arxiv.org/abs/2312.11337)
+[![PyPI version](https://badge.fury.io/py/qcd-gym.svg)](https://badge.fury.io/py/qcd-gym)
 
 ## **Description**
 
@@ -101,7 +102,7 @@ Currently, the only further objective implemented in this environment is the **c
 Install the quantum circuit designer environment
 
 ```sh
-pip install git+https://github.com/philippaltmann/qcd
+pip install qcd-gym
 ```
 
 The environment can be set up as:

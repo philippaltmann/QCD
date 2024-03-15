@@ -2,6 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2312.11337-b31b1b.svg)](https://arxiv.org/abs/2312.11337)
 [![PyPI version](https://badge.fury.io/py/qcd-gym.svg)](https://badge.fury.io/py/qcd-gym)
+![alt text](QCD.png)
 
 ## **Description**
 
@@ -52,15 +53,15 @@ The reward is kept $0$ until the end of an episode is reached (either by truncat
 To incentivize the use of few operations, a step-cost $\mathcal{C}_t$ is applied when exceeding two-thirds of the available operations $\sigma$:
 $$\mathcal{C}_t=\max\left(0,\frac{3}{2\sigma}\left(t-\frac{\sigma}{3}\right)\right)$$
 
-Suitable task reward functions $\mathcal{R}^{*}\in[0,1]$ are defined, s.t.: $\mathcal{R}=\mathcal{R}^{*}(s_t,a_t)-C_t$, according to the following challenges:
+Suitable task reward functions $\mathcal{R}^{\*}\in[0,1]$ are defined, s.t.: $\mathcal{R}=\mathcal{R}^{\*}(s_t,a_t)-C_t$ if $t$ is terminal, according to the following challenges:
 
 ## Challenges
 
 ### **State Preparation**
 
 The objective of this challenge is to construct a quantum circuit that generates a desired quantum state.
-The reward is based on the *fidelity* $\mathcal{F} = |\braket{\psi_{\text{env}}|\psi_{\text{target}}}|^2 \in [0,1]$ between the target an the final state:
-$$\mathcal{R}^{SP}(s_t,a_t) = \begin{dcases} F(s_t, \Psi), &  \text{if $t$ is terminal.}  \\0, & \text{otherwise.} \end{dcases}$$
+The reward is based on the *fidelity* between the target an the final state:
+$$\mathcal{R}^{SP}(s_t,a_t) = F(s_t, \Psi) = |\braket{\psi_{\text{env}}|\psi_{\text{target}}}|^2 \in [0,1]$$
 Currently, the following states are defined:
 - `'SP-random'` (a random state over *max_qubits* )
 - `'SP-bell'` (the 2-qubit Bell state)
@@ -71,7 +72,7 @@ Currently, the following states are defined:
 The objective of this challenge is to construct a quantum circuit that implements a desired unitary operation.
 The reward is based on the ***Frobenius norm*** $D = |U - V(\Sigma_t)|_2$ between the taget unitary $U$ and the final unitary $V$ based on the sequence of operations $\Sigma_t = \langle a_0, \dots, a_t \rangle$: 
 
-$$ R^{UC}(s_t,a_t) = \begin{dcases} 1 - \arctan (D), & \text{if $t$ is terminal.} \\0, & \text{otherwise.} \end{dcases}$$
+$$ R^{UC}(s_t,a_t) = 1 - \arctan (D)$$
 
 <!-- For the reward function, an 1-arctan mapping of the ***Frobenius norm*** $|U_{\text{env}} - U_{\text{target}}|_2$ to the interval $[0,1]$ is chosen.  -->
 The following unitaries are currently available for this challenge:
@@ -155,3 +156,16 @@ python -m plot results
 # Test the circuit designer (requires `pip install -e '.[test]'`)
 python -m circuit_designer.test
 ```
+
+## Results 
+
+![alt text](Results.png)
+
+
+## Acknowledgements
+
+The research is part of the [Munich Quantum Valley](https://www.munich-quantum-valley.de), which is supported by the Bavarian state government with funds from the [Hightech Agenda Bayern Plus](https://www.hightechagenda.de).
+
+
+
+

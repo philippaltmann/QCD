@@ -41,9 +41,11 @@ class Monitor(gym.Wrapper[ObsType, ActType, ObsType, ActType]):
       self._termination_reasons.append(info.pop('termination_reason'))
       self._episode_lengths.append(ep_len); self._episode_times.append(time.time() - self.t_start)
 
-      ep_info['d'] = info["resources"].depth      # ['depth']
-      ep_info['q'] = info["resources"].num_wires  # ['num_used_wires']
-      ep_info['o'] = info["resources"].num_gates  # ['num_operations']
+      ep_info['d'] = info["depth"]
+      ep_info['o'] = info["operations"]
+      ep_info['q'] = info["used_wires"]
+      ep_info['m'] = info["metric"]
+      ep_info['c'] = info["cost"]
       info["episode"] = ep_info
 
     self._total_steps += 1
@@ -56,9 +58,7 @@ class Monitor(gym.Wrapper[ObsType, ActType, ObsType, ActType]):
   
   def write_video(self, writer, label, step):
     """Adds current videobuffer to tensorboard"""
-    frame_buffer =  self.get_video()
-    if self.render_mode  == 'text': writer.add_text(label, frame_buffer[-2], step)
-    elif self.render_mode  == 'image': assert False, 'Not implemented'
+    if self.render_mode  == 'text': writer.add_text(label, str(self.env.render()), step)
   
   @property
   def total_steps(self) -> int: return self._total_steps

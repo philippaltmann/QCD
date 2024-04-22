@@ -1,8 +1,7 @@
 import numpy as np; import pandas as pd; import random
-import torch as th; import scipy.stats as st
+import torch as th; import scipy.stats as st; import re
 from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.callbacks import CallbackList
-from stable_baselines3.common.policies import ActorCriticPolicy, obs_as_tensor as obs
+from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.common.save_util import load_from_zip_file, recursive_setattr
 from torch.utils.tensorboard.writer import SummaryWriter
@@ -10,41 +9,47 @@ from typing import Dict, List, Optional, Type, Union
 from tqdm import tqdm; import os
 import gymnasium as gym
 import platform; import stable_baselines3 as sb3; 
-from algorithm.evaluation import EvaluationCallback
-from algorithm.factory import factory
+
+from circuit_designer.wrappers.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv
+
+def _make(record_video=False, **spec):
+  def _init() -> gym.Env: return Monitor(gym.make(**spec), record_video=record_video) 
+  return _init
+
+def named(env):
+  max_qubits = int(re.search('-q(\d+)', env).group(1)); env = re.sub('-q(\d+)', '', env)
+  max_depth = int(re.search('-d(\d+)', env).group(1)); env = re.sub('-d(\d+)', '', env)
+  return {'id': 'CircuitDesigner-v0', 'max_qubits': max_qubits, 'max_depth': max_depth, 'objective': env}
+
+def make_vec(env, seed=None, n_envs=4, **kwargs):
+  spec = lambda rank: {**named(env), 'seed': seed, **kwargs}
+  return DummyVecEnv([_make(**spec(i)) for i in range(n_envs)])
+
 
 
 class TrainableAlgorithm(BaseAlgorithm):
   """ Generic Algorithm Class extending BaseAlgorithm with features needed by the training pipeline """
-  def __init__(self, envs:List[str]=None, normalize:bool=False, policy:Union[str,Type[ActorCriticPolicy]]="MlpPolicy", path:Optional[str]=None, 
-               seed=None, silent=False, stop_on_reward=False, explore=False, log_name=None, envkwargs={}, **kwargs):
+  def __init__(self, env:str, normalize:bool=False, policy:Union[str,Type[ActorCriticPolicy]]="MlpPolicy", path:Optional[str]=None, seed=None, silent=False, log_name=None, envkwargs={}, **kwargs):
     """ :param env: The environment to learn from (if registered in Gym, can be str)
     :param policy: The policy model to use (MlpPolicy, CnnPolicy, ...) defaults to MlpPolicy
     :param normalize: whether to use normalized observations, default: False
-    :param stop_on_reward: bool for ealry stopping, defaults to False. 
-    :param explore: sets enviornment to explore mode, default False
     :param log_name: optional custom folder name for logging
     :param path: (str) the log location for tensorboard (if None, no logging) """
-    _path = lambda seed: f"{path}/{envs[0]}/{log_name or str(self.__class__.__name__)}/{seed}"
+    _path = lambda seed: f"{path}/{env}/{log_name or str(self.__class__.__name__)}/{seed}"
     gen_seed = lambda s=random.randint(0, 999): s if not os.path.isdir(_path(s)) else gen_seed()
     if seed is None: seed = gen_seed()
     self.path = _path(seed) if path is not None else None; self.eval_frequency, self.progress_bar = None, None
-    if envs is not None: self.envs = factory(envs, seed=seed, **envkwargs); 
-    self.explore = explore; self.stop_on_reward = stop_on_reward and not explore
+    env = make_vec(env, seed=seed, **envkwargs)
     self.normalize, self.silent, self.continue_training = normalize, silent, True; 
-    super().__init__(policy=policy, seed=seed, verbose=0, env=self.envs['train'], **kwargs)
+    super().__init__(policy=policy, seed=seed, verbose=0, env=env, **kwargs)
     
   def _setup_model(self) -> None:
     if self.normalize: self.env = VecNormalize(self.env)
-    self._naming = {'l': 'length-100', 'r': 'return-100'}; self._custom_scalars = {} #, 's': 'safety-100'
-    self.get_actions = lambda s: self.policy.get_distribution(obs(np.expand_dims(s, axis=0), self.device)).distribution.probs   
-    self.heatmap_iterations = { # Deterministic policy heatmaps
-      'action': (lambda _,s,a,r: self.policy.predict(s.flat, deterministic=True)[0] == a, (0,1)),
-      # Prob distributions (coelation of porb index and action number might be misalligned)
-      'policy': (lambda _, s, a, r: self.get_actions(s).cpu().detach().numpy()[0][a], (0,1))}
-    super(TrainableAlgorithm, self)._setup_model(); stage = '/explore' if self.explore else '/train'
-    self.writer, self._registered_ci = SummaryWriter(self.path + stage) if self.path and not self.silent else None, [] 
-    if not self.silent and not self.explore: print("+-------------------------------------------------------+\n"\
+    self._naming = {'l': 'length-100', 'r': 'return-100'}; self._custom_scalars = {}
+    super(TrainableAlgorithm, self)._setup_model()
+    self.writer, self._registered_ci = SummaryWriter(self.path+"/train") if self.path and not self.silent else None, [] 
+    if not self.silent: print("+-------------------------------------------------------+\n"\
       f"| System: {platform.version()}         |\n" \
       f"| GPU: {f'Enabled, version {th.version.cuda} on {th.cuda.get_device_name(0)}' if th.cuda.is_available() else'Disabled'} |\n"\
         f"| Python: {platform.python_version()} | PyTorch: {th.__version__} | Numpy: {np.__version__} |\n" \
@@ -57,34 +62,34 @@ class TrainableAlgorithm(BaseAlgorithm):
     E.g. replay buffers are skipped by default as they take up a lot of space.
     PyTorch variables should be excluded with this so they can be stored with ``th.save``.
     :return: List of parameters that should be excluded from being saved with pickle. """
-    return super(TrainableAlgorithm, self)._excluded_save_params() + ['get_actions', 'heatmap_iterations', '_naming', '_custom_scalars', '_registered_ci', 'envs', 'writer', 'progress_bar', 'silent']
+    return super(TrainableAlgorithm, self)._excluded_save_params() + ['_naming', '_custom_scalars', '_registered_ci', 'writer', 'progress_bar', 'silent']
 
   def should_eval(self) -> bool: return self.eval_frequency is not None and self.num_timesteps % self.eval_frequency == 0  
 
   def learn(self, total_timesteps: int, eval_frequency=8192, eval_kwargs={}, **kwargs) -> "TrainableAlgorithm":
     """ Learn a policy
     :param total_timesteps: The total number of samples (env steps) to train on
-    :param eval_kwargs: stop_on_reward: Threshold of the mean 100 episode return to terminate training., record_video:bool=True, write_heatmaps:bool=True, run_test:bool=True
     :param **kwargs: further aguments are passed to the parent classes 
     :return: the trained model """
-    stop_on_reward = self.env.get_attr('reward_threshold')[0] if self.stop_on_reward else None
-    callback = EvaluationCallback(self, self.envs['test'], stop_on_reward=stop_on_reward, **eval_kwargs); 
-    if 'callback' in kwargs: callback = CallbackList([kwargs.pop('callback'), callback])    
-    alg = self.__class__.__name__; total = self.num_timesteps+total_timesteps; stepsize = self.n_steps * self.n_envs;
+    total = self.num_timesteps+total_timesteps; stepsize = self.n_steps * self.n_envs;
     if eval_frequency is not None: self.eval_frequency = eval_frequency * self.n_envs // stepsize * stepsize or eval_frequency * self.n_envs
     # total = self.num_timesteps+total_timesteps
     # if eval_frequency is not None: self.eval_frequency = eval_frequency * self.n_envs # **2
     hps = self.get_hparams(); hps.pop('seed'); hps.pop('num_timesteps');  
-    self.progress_bar = tqdm(total=total, unit="steps", postfix=[0,""], bar_format="{desc}[R: {postfix[0]:4.2f}][{bar}]({percentage:3.0f}%)[{n_fmt}/{total_fmt}@{rate_fmt}]") 
+    # self.progress_bar = tqdm(total=total, unit="steps", postfix=[0,""], bar_format="{desc}[R: {postfix[0]:4.2f}][{bar}]({percentage:3.0f}%)[{n_fmt}/{total_fmt}@{rate_fmt}]") 
+    metrics = "M: {postfix[0]:4.2f} | Q: {postfix[1]:4.2f} | D: {postfix[2]:4.2f}"
+    self.progress_bar = tqdm(total=total, unit="steps", postfix=[0,0,0,""], bar_format="{desc}["+metrics+"][{bar}]({percentage:3.0f}%)[{n_fmt}/{total_fmt}@{rate_fmt}]") 
     self.progress_bar.update(self.num_timesteps); 
-    model = super(TrainableAlgorithm, self).learn(total_timesteps=total_timesteps, callback=callback, **kwargs)
+    model = super(TrainableAlgorithm, self).learn(total_timesteps=total_timesteps, **kwargs) #callback=callback, 
     self.progress_bar.close()
     return model
 
   def train(self, **kwargs) -> None:
     if not self.continue_training: return
-    # print(f"train {self.num_timesteps} | {self.eval_frequency}")
-    self.progress_bar.postfix[0] = np.mean([ep_info["r"] for ep_info in self.ep_info_buffer])
+    self.progress_bar.postfix[0] = np.mean([ep_info["m"] for ep_info in self.ep_info_buffer])
+    self.progress_bar.postfix[1] = np.mean([ep_info["q"] for ep_info in self.ep_info_buffer])
+    self.progress_bar.postfix[2] = np.mean([ep_info["d"] for ep_info in self.ep_info_buffer])
+
     if self.should_eval(): self.progress_bar.update(self.eval_frequency); #n_steps
     summary, step = {}, self.num_timesteps 
 

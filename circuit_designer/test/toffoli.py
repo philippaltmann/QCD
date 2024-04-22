@@ -5,29 +5,27 @@ def toffoli():
   env.reset()
 
   # V
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
-  env.step([1,2,1,np.pi/2])  
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
+  env.step([0,2,1,np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
 
   # Cnot
-  env.step([2,1,0,np.pi/2])  
+  env.step([1,1,0,np.pi/2])  
 
   # V-
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
-  env.step([1,2,1,-np.pi/2])  
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
+  env.step([0,2,1,-np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
 
   # Cnot
-  env.step([2,1,0,np.pi/2])  
+  env.step([1,1,0,np.pi/2])  
 
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
-  env.step([1,2,0,np.pi/2])  
-  env.step([1,2,2,np.pi/2]); env.step([2,2,2,np.pi/2]); env.step([1,2,2,np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
+  env.step([0,2,0,np.pi/2])  
+  env.step([0,2,2,np.pi/2]); env.step([1,2,2,np.pi/2]); env.step([0,2,2,np.pi/2])  
   # CZ pi/2
 
   # Meassure
-  env.step([0,0,0,0])
-  env.step([0,1,0,0])
-  reward = env.step([0,2,0,0])[1]
+  reward = env.step([2,0,0,0])[1]
   np.testing.assert_almost_equal(reward, 1)
   print("Succeeded Toffoli test")

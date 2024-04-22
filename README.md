@@ -1,9 +1,6 @@
 # Quantum Circuit Designer
 
-<!-- [![AAMAS](https://zenodo.org/badge/doi/10.24963/ijcai.2023/380.svg)](https://doi.org/10.24963/ijcai.2023/380) -->
-<!-- [![arXiv](https://img.shields.io/badge/arXiv-2312.11337-b31b1b.svg)](https://arxiv.org/abs/2312.11337)
-[![PyPI version](https://badge.fury.io/py/qcd-gym.svg)](https://badge.fury.io/py/qcd-gym)
-![alt text](QCD.png) -->
+![alt text](QCD.png)
 
 ## **Description**
 
@@ -156,15 +153,6 @@ python -m plot results -b # plot all runs in `results`, add random and evo basel
 python -m circuit_designer.test
 ```
 
-## Results 
-
-![Preliminary Results](Results.png)
-
-
 ## Acknowledgements
 
 The research is part of the [Munich Quantum Valley](https://www.munich-quantum-valley.de), which is supported by the Bavarian state government with funds from the [Hightech Agenda Bayern Plus](https://www.hightechagenda.de).
-
-
-
-

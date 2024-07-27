@@ -1,7 +1,7 @@
 import gymnasium as gym; import numpy as np
 
 def toffoli():
-  env = gym.make("CircuitDesigner-v0", max_qubits=3, max_depth=63, challenge='UC-toffoli')
+  env = gym.make("CircuitDesigner-v0", max_qubits=3, max_depth=63, objective='UC-toffoli')
   env.reset()
 
   # V

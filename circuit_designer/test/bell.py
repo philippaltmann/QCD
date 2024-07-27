@@ -1,7 +1,7 @@
 import gymnasium as gym; import numpy as np
 
 def bell():
-  env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=12, challenge='SP-bell')
+  env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=12, objective='SP-bell')
   env.reset()
 
   # H

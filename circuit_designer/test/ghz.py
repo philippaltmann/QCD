@@ -1,7 +1,7 @@
 import gymnasium as gym; import numpy as np
 
 def ghz():
-  env = gym.make("CircuitDesigner-v0", max_qubits=3, max_depth=15, challenge='SP-ghz3')
+  env = gym.make("CircuitDesigner-v0", max_qubits=3, max_depth=15, objective='SP-ghz3')
   env.reset()
   
   # H

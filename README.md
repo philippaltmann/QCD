@@ -1,10 +1,13 @@
 # Quantum Circuit Designer
+[![arXiv](https://img.shields.io/badge/arXiv-2312.11337-b31b1b.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2312.11337)
+[![GitHub Release](https://img.shields.io/github/v/release/philippaltmann/qcd?logo=github&logoColor=white&label=GitHub)](http://github.com/philippaltmann/qcd)
+[![PyPI Version](https://img.shields.io/pypi/v/qcd-gym?logo=pypi&logoColor=white)](https://pypi.org/p/qcd-gym/)
 
-![alt text](QCD.png)
+![QCD Overview](QCD.png)
 
 ## **Description**
 
-This repository contains the Quantum Circuit Designer, a generic [gymnasium](https://github.com/Farama-Foundation/Gymnasium) environment to build quantum circuits gate-by-gate using [qiskit](https://github.com/Qiskit/qiskit), revealing current challenges regarding:
+This repository contains `qcd-gym`, a generic [gymnasium](https://github.com/Farama-Foundation/Gymnasium) environment to build quantum circuits gate-by-gate using [qiskit](https://github.com/Qiskit/qiskit), revealing current challenges regarding:
 
 - [State Preparation (SP)](#state-preparation): Find a gate sequence that turns some initial state into the target quantum state.
 - [Unitary Composition (UC)](#unitary-composition): Find a gate sequence that constructs an arbitrary quantum operator.
@@ -12,7 +15,7 @@ This repository contains the Quantum Circuit Designer, a generic [gymnasium](htt
 
 ## Observations
 
-The observation is comprised of the state of the current circuit, represented by the full complex vector representation $\ket{\Psi}$ or the unitary operator $\B{V}(\Sigma_t)$ resulting from the current sequence of operations $\Sigma_t$, as well as the intended target. 
+The observation is comprised of the state of the current circuit, represented by the full complex vector representation $\ket{\Psi}$ or the unitary operator $\boldsymbol{V}(\Sigma_t)$ resulting from the current sequence of operations $\Sigma_t$, as well as the intended target. 
 While this information is only available in quantum circuit simulators efficiently (on real hardware, $\mathcal{O}(2^\eta)$ measurements would be needed), it depicts a starting point for RL from which future work should extract a sufficient, efficiently obtainable, subset of information.
 This state representation is sufficient for the definition of an MDP-compliant environment, as operations on this state are required to be reversible. 
 
@@ -50,7 +53,7 @@ The reward is kept $0$ until the end of an episode is reached (either by truncat
 To incentivize the use of few operations, a step-cost $\mathcal{C}_t$ is applied when exceeding two-thirds of the available operations $\sigma$:
 $$\mathcal{C}_t=\max\left(0,\frac{3}{2\sigma}\left(t-\frac{\sigma}{3}\right)\right)$$
 
-Suitable task reward functions $\mathcal{R}^{\*}\in[0,1]$ are defined, s.t.: $\mathcal{R}=\mathcal{R}^{\*}(s_t,a_t)-C_t$ if $t$ is terminal, according to the following objectives:
+Suitable task reward functions $\mathcal{R}^{\ast}\in[0,1]$ are defined, s.t.: $\mathcal{R}=\mathcal{R}^{\ast}(s_t,a_t)-C_t$ if $t$ is terminal, according to the following objectives:
 
 ## Objectives
 
@@ -152,6 +155,12 @@ python -m plot results -b # plot all runs in `results`, add random and evo basel
 # Test the circuit designer (requires `pip install -e '.[test]'`)
 python -m circuit_designer.test
 ```
+
+## Results
+
+![](Results.png)
+
+
 
 ## Acknowledgements
 

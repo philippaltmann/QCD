@@ -10,7 +10,7 @@ from tqdm import tqdm; import os
 import gymnasium as gym
 import platform; import stable_baselines3 as sb3; 
 
-from circuit_designer.wrappers.monitor import Monitor
+from qcd_gym.wrappers.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv
 
 def _make(record_video=False, **spec):

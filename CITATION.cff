@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "Quantum Circuit Designer"
+title: "qcd-gym"
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -8,7 +8,6 @@ authors:
   - given-names: Philipp
     family-names: Altmann
     email: philipp@hyphi.co
-    orcid: 'https://orcid.org/0000-0003-1134-176X'
 repository-code: 'https://github.com/philippaltmann/qcd/'
 url: 'https://github.com/philippaltmann/qcd/'
 abstract: >-

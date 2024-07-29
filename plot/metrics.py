@@ -2,7 +2,7 @@ import os; from os import path; import itertools; from tqdm import tqdm
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator as EA
 import pandas as pd; import numpy as np; import scipy.stats as st; import re
 import gymnasium as gym; from algorithm.algorithm import named
-from circuit_designer.wrappers import Monitor
+from qcd_gym.wrappers import Monitor
 from baselines import *
 
 
@@ -135,7 +135,6 @@ def process_steps(data, models): return ([d.index[-1] for d in data], 10e5)
 
 
 def fetch_evo(base, experiment, EPS=100, dump=False, load=True):
-  from evo.run import run_evo   
   out = f"{base}/{experiment['title']}/GA"
   if not os.path.exists(out) or not load:
     print(f"Running Evo Baseline for {experiment['title']}")

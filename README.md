@@ -110,7 +110,7 @@ The environment can be set up as:
 ```python
 import gymnasium as gym
 
-env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=10, objective='SP-bell', render_mode='text', verbose=True)
+env = gym.make("CircuitDesigner-v0", max_qubits=2, max_depth=10, objective='SP-bell', render_mode='text')
 observation, info = env.reset(seed=42); env.action_space.seed(42)
 
 for _ in range(9):
@@ -153,12 +153,12 @@ python -m plot results -b # plot all runs in `results`, add random and evo basel
 ./run.sh
 
 # Test the circuit designer (requires `pip install -e '.[test]'`)
-python -m circuit_designer.test
+python -m test
 ```
 
 ## Results
 
-![](Results.png)
+![Results](Results.png)
 
 
 

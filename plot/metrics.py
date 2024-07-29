@@ -1,19 +1,13 @@
 import os; from os import path; import itertools; from tqdm import tqdm
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator as EA
 import pandas as pd; import numpy as np; import scipy.stats as st; import re
-import gymnasium as gym; from algorithm.factory import named
-from circuit_designer.wrappers import Monitor
+import gymnasium as gym; from algorithm.algorithm import named
+from qcd_gym.wrappers import Monitor
 from baselines import *
 
-# TODO: acc pretrain scores 
 
 def extract_model(exp, run):
   return None
-  if '-' in exp['algorithm']: explorer,exp['algorithm'] = exp['algorithm'].split('-')
-  algorithm, seed = eval(exp['algorithm']), int(run.name)
-  # TODO: load explorer if not in ['Random', 'LOAD']
-  model = algorithm.load(load=run.path, seed=seed, envs=[exp['env']], path=None, device='cpu')
-  return model
 
 def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv=False, baseline=None, random_baseline=True):
   """Loads and structures all tb log files Given:
@@ -21,7 +15,7 @@ def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv
   :param env (optional): the environment to load 
   :param alg (optional): the algorithm to load 
   :param metrics: list of (Name, Tag) tuples of metrics to load
-  :param save_csv: save loaded experiments to csv
+  :param dump_csv: save loaded experiments to csv
   Returns: list with dicts of experiments 
   """
   # Helper to fetch all relevant folders 
@@ -33,16 +27,12 @@ def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv
 
   print(f"Scanning for {alg if alg else 'algorithms'} in {base}")  # Second layer: Algorithms
   if alg: experiments = [{**exp, 'algorithm': alg, 'path': a} for exp in tqdm(experiments) for a in subdirs(exp['path']) if alg == a.name]
-  else: experiments = [{**exp, 'algorithm': a.name, 'path': a} for exp in tqdm(experiments) for a in subdirs(exp['path']) if any([n in ALGS for n in a.name.split('-')])]
-
-  # Split explorer:
-  # experiments = [{**e, 'algorithm': e['algorithm'].split('-')[-1], 'explorer': e['algorithm'].split('-')[0] if len(e['algorithm'].split('-'))>1 else 'Random'} for e in tqdm(experiments)]
+  else: experiments = [{**exp, 'algorithm': a.name, 'path': a} for exp in tqdm(experiments) for a in subdirs(exp['path']) if any([n in [*ALGS] for n in a.name.split('-')])]
 
 
   # Third Layer: Count Runs / fetch tb files
   print(f"Scanning for hyperparameters in {base}")  # Third layer: Hyperparameters & number of runs
   experiments = [{ **e, 'runs': len(subdirs(e['path'])) } for e in tqdm(experiments) if os.path.isdir(e['path'])]
-  # experiments = [{ **exp, 'path': e.path,  'method': e.name, 'runs': len(subdirs(e)) } for exp in tqdm(experiments) if os.path.isdir(exp['path']) for e in subdirs(exp['path'])] # With hp
 
   progressbar = tqdm(total=sum([exp['runs'] for exp in experiments])* len(metrics))
   data_buffer = {}
@@ -54,9 +44,15 @@ def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv
     # Use buffered Event Accumulator if already open
     if log := data_buffer.get(run_path):
       extract_args = {'columns': ['Time', 'Step', 'Data'], 'index': 'Step', 'exclude': ['Time']}
-      # print(log.scalars.Keys())
-      data = pd.DataFrame.from_records([(s.wall_time, s.step, s.value) for s in log.Scalars(key)], **extract_args)
-      # data = pd.DataFrame.from_records(log.Scalars(key), **extract_args)
+      if key == 'auto':
+        d = int(exp['env'].split('-d')[1])
+        data = fetch_data(exp, run_path, 'Return', 'rewards/return-100-mean')
+        depth = fetch_data(exp, run_path, 'Depth', 'rewards/depth-100-mean')
+        pen = depth['Data'].apply(lambda D: max(0,D-d/3)/(d/2*3))
+        if name == 'Metric': data['Data'] += pen
+        if name == 'Cost': data['Data'] = pen
+      else: 
+        data = pd.DataFrame.from_records([(s.wall_time, s.step, s.value) for s in log.Scalars(key)], **extract_args)
       data = data.loc[~data.index.duplicated(keep='first')] # Remove duplicate indexes
       if dump_csv: data.to_csv(f'{run_path}/{name}.csv')
       return data    
@@ -83,7 +79,6 @@ def fetch_experiments(base='./results', alg=None, env=None, metrics=[], dump_csv
   return experiments
 
 
-# def group_experiments(experiments, groupby=['algorithm', 'env'], mergeon=None): #merge=None
 def group_experiments(experiments, groupby=['env'], mergeon=None): #merge=None
   # Graphical helpers for titles, labels
   forms = ['algorithm', 'env']
@@ -91,7 +86,6 @@ def group_experiments(experiments, groupby=['env'], mergeon=None): #merge=None
     i = {key: re.sub(r'[0-9]+ ', '', exp[key]) for key in forms if key in exp and key not in groupby}
     check = lambda keys,base,op=all: op([k in base for k in keys])
     return f"{i['algorithm']}-{i['explorer']}" if 'explorer' in i else i['algorithm']
-    # return f"{i['algorithm'] if check(['algorithm', 'method'],i) and check(['Full','RAD'],i['method'], any) else ''} {'FO' if check(['Full'],i['method']) else i['method']}"
 
   title = lambda exp: ' '.join([exp[key] for key in forms if key in exp and key in groupby])
 
@@ -118,9 +112,6 @@ def calculate_metrics(plots, metrics):
   """
   def process(metric, proc, plot):
     graphs = [ { **graph, 'data': proc(graph['data'][metric], graph['models']) } for graph in plot['graphs']]
-    if metric == 'Heatmap':
-      return [ { 'title': f"{plot['title']} | {graph['label']} | {key} ", 'data': data, 'metric': metric} 
-        for graph in graphs for key, data in graph['data'].items() ]
     return [{ **plot, 'graphs': graphs, 'metric': metric}]
   return [ result for metric in metrics for plot in plots for result in process(*metric, plot)]
 
@@ -131,7 +122,7 @@ def process_ci(data, models):
   reward_range = (0,1)
   # Prepare Data (fill until highest index)
   steps = [d.index[-1] for d in data]; maxsteps = np.max(steps)
-  for d in data: d.at[maxsteps, 'Data'] = float(d.tail(1)['Data'])
+  for d in data: d.at[maxsteps, 'Data'] = float(d.tail(1)['Data'].iloc[0])
   data = pd.concat(data, axis=1, ignore_index=False, sort=True).bfill()
   
   # Mean 1..n | CI 1..n..1
@@ -142,15 +133,37 @@ def process_ci(data, models):
 
 def process_steps(data, models): return ([d.index[-1] for d in data], 10e5)
 
-iterate = lambda model, envs, func: [ func(env, k,i) for env in envs for k,i in model.heatmap_iterations.items() ]
-heatmap = lambda model, envs: iterate(model, envs, lambda env, k,i: env.envs[0].iterate(i[0]))
 
+def fetch_evo(base, experiment, EPS=100, dump=False, load=True):
+  out = f"{base}/{experiment['title']}/GA"
+  if not os.path.exists(out) or not load:
+    print(f"Running Evo Baseline for {experiment['title']}")
+    data = {m: [] for m in experiment['graphs'][0]['data'].keys()}
+    steps = [i for g in experiment['graphs'] for i in g['data'][list(data.keys())[0]][0].index]; 
+    index = [np.min(steps), np.max(steps)]
+    for s in range(8):
+      [d.append([]) for d in data.values()]
+      info = run_evo(experiment['title'], s+1)
+      for key,val in data.items(): 
+        val[-1] = pd.DataFrame([info[key]]*2, index=index, columns=['Data']).rename_axis(index='Step')
 
-def fetch_random(base, experiment, EPS=100):
-  if not os.path.exists(f"{base}/{experiment['title']}/Random"):
+    if dump: 
+      os.makedirs(f"{out}", exist_ok=True)
+      [pd.concat(metric, axis=1).to_csv(f"{out}/{key}.csv") for key, metric in data.items()]
+
+  else: data = { m: [
+        c.to_frame('Data') for _,c in pd.read_csv(f"{out}/{m}.csv").set_index('Step').items()
+      ] for m in experiment['graphs'][0]['data'].keys()}
+    
+  experiment['graphs'].append({'label': 'GA', 'models': [None], 'data': data})
+  
+
+def fetch_random(base, experiment, EPS=100, dump=False, load=True):
+  out = f"{base}/{experiment['title']}/Random"
+  if not os.path.exists(out) or not load:
     print(f"Running Random Baseline for {experiment['title']}")
-    M = {'Return': 'r', 'Depth': 'd', 'Qubits': 'q'}
-    env = Monitor(gym.make(**named(experiment['title']), seed=42, discrete=False))
+    M = {'Return': 'r', 'Depth': 'd', 'Qubits': 'q', 'Metric': 'm', 'Cost': 'c'}
+    env = Monitor(gym.make(**named(experiment['title']), seed=42))  #, discrete=False
     data = {m: [] for m in experiment['graphs'][0]['data'].keys()}
     steps = [i for g in experiment['graphs'] for i in g['data'][list(data.keys())[0]][0].index]; 
     index = [np.min(steps), np.max(steps)]
@@ -160,6 +173,14 @@ def fetch_random(base, experiment, EPS=100):
         env.reset(); terminated = False; truncated = False
         while not (terminated or truncated): _, _, terminated, truncated, info = env.step(env.action_space.sample())
         [val[-1].append(info['episode'][M[key]]) for key,val in data.items()]
-      for val in data.values(): val[-1] = pd.DataFrame([sum(val[-1])/EPS]*2, index=index, columns=['Data'])
-    experiment['graphs'].append({'label': 'Random', 'models': [None], 'data': data})
-  else: assert False, "TODO: load random baseline"
+      for val in data.values(): val[-1] = pd.DataFrame([sum(val[-1])/EPS]*2, index=index, columns=['Data']).rename_axis(index='Step')
+    if dump: 
+      os.makedirs(f"{out}", exist_ok=True)
+      [pd.concat(metric, axis=1).to_csv(f"{out}/{key}.csv") for key, metric in data.items()]
+
+  else: data = { m: [
+        c.to_frame('Data') for _,c in pd.read_csv(f"{out}/{m}.csv").set_index('Step').items()
+      ] for m in experiment['graphs'][0]['data'].keys()}
+
+  experiment['graphs'].append({'label': 'Random', 'models': [None], 'data': data})
+  

@@ -10,7 +10,7 @@ setup(
   url="https://github.com/philippaltmann/qcd", author_email="philipp@hyphi.co", license="MIT",
   keywords="benchmark reinforcement-learning quantum-computing gymnasium circuit-design",
   long_description=(Path(__file__).parent / "README.md").read_text(), long_description_content_type="text/markdown",
-  packages=[package for package in find_packages() if package.startswith("circuit_designer")],
+  packages=find_packages(include=['qcd_gym','qcd_gym.wrappers']),
   install_requires=[ "gymnasium==0.29", "qiskit==1.0.2" ],
   extras_require = { 
     "tests": [ "pytest", "black"], 
@@ -18,5 +18,5 @@ setup(
     "all": train + plot
   },
   python_requires=">=3.8",
-  entry_points={ "gymnasium.envs": ["__root__ = circuit_designer.__init__:register_envs"] }
+  entry_points={ "gymnasium.envs": ["__root__ = qcd_gym.__init__:register_envs"] }
 )
